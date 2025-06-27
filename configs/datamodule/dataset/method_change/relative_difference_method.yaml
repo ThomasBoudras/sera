@@ -1,0 +1,2 @@
+_target_: src.datamodules.datasets.change_method.relative_difference_method
+max_difference : 1.3

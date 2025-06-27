@@ -1,0 +1,56 @@
+# @package _global_
+
+defaults:
+  - override /experiment: utae_sl1_16img
+  - override /callbacks: null
+  - override /model/network : ic_classic_network
+  - override /model/network/regression: OpenCanopyModel
+  - override /datamodule/dataset : change_dataset
+  - override /datamodule/dataset/get_inputs : spot_composites_change
+  - override /datamodule/dataset/method_change : difference_method
+
+seed: 12345 
+print_config: true
+
+run_name: ic_d_OpenCanopy
+run_version: v1_${run_name}
+
+version_pred_name: geometries_test
+project : "sera_predictions"
+
+ckpt_path: null
+load_just_weights: True
+
+save_dir: ${log_dir}/${version_pred_name}/predictions
+
+via_bounds : null
+via_geojson :
+  path : ${data_dir}/utils/change_geometries_120_days_cleaned.geojson
+  split: test
+
+datamodule:
+  instance:
+    patch_size_input: 224
+    patch_size_target: 224
+    normalization_save_path: ${work_dir}/normalization_values_spot/
+  dataset:
+    input_path: ${data_dir}/spot/
+    target_path: ${data_dir}/lidar
+    geometries_path : ${data_dir}/utils/change_geometries_120_days_cleaned.geojson
+    input_resolution : 1.5
+    target_resolution : 1.5
+    predict_dataset :
+      get_targets : ${datamodule.dataset.get_targets}
+
+
+logger:
+    wandb:
+        tags: ["difference map", "super_resolution", "canopy", "EDSR", "UTAE"]
+
+model:
+  instance:
+    train_metrics: null
+    val_metrics: null 
+    test_metrics: null
+    predictions_save_dir : ${save_dir}
+    save_target : True

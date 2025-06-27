@@ -1,0 +1,12 @@
+defaults:
+  - regression: UNet
+  - super_resolution: EDSR
+  - _self_
+
+
+instance:
+  _target_: src.models.networks.ic_end_2_end.ICEnd2EndNetwork
+  regression_model: ${model.network.regression}
+  super_resolution_model: ${model.network.super_resolution}
+  change_method : ${datamodule.dataset.method_change}
+  use_final_layer : False

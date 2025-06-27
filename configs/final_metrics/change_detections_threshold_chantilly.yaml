@@ -1,0 +1,380 @@
+# @package _global_
+
+metrics_type : change_detections
+prediction_type : chantilly
+model : d_EDSR_UTAES_diff_SL1_16img
+nb_version_model: 9
+
+min_area : 200
+threshold : -15
+min_diff : -40
+max_diff : 5
+resolution : 1.5
+channel_input_plot: [2,1,0]
+seed : 12345
+
+save_dir : /work/work/sera/logs/${metrics_type}/${model}/${prediction_type}
+output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
+version_metrics_type : dth${mul:-1,${threshold}}_ma${min_area}_res${from_float_to_str:${resolution}}
+geometries_path : /work/work/sera/logs/sera_predictions/${model}/v${nb_version_model}_${model}/${prediction_type}/predictions/geometries.geojson
+patch_size_plot : 0.3
+
+hydra:
+  run:
+    dir: ${save_dir}/${version_metrics_type}
+
+get_images : 
+  _target_ : src.results.get_images_utils.get_images
+  image_loaded_set:
+    input_year_1 : 
+      _target_: src.results.get_images_utils.image_loader_model
+      path: /work/work/sera/logs/sera_predictions/${model}/v${nb_version_model}_${model}/${prediction_type}/predictions/data/input_1/full_${model}_input_1.vrt
+      resampling_method : max
+
+    input_year_2 : 
+      _target_: src.results.get_images_utils.image_loader_model
+      path: /work/work/sera/logs/sera_predictions/${model}/v${nb_version_model}_${model}/${prediction_type}/predictions/data/input_2/full_${model}_input_2.vrt
+      resampling_method : max
+
+    # height_1_pred : 
+    #   _target_: src.results.get_images_utils.image_loader_model
+    #   path: /work/work/sera/logs/change_detections/Open_canopy/data/predictions_1.tif
+    #   resolution: ${resolution}
+    #   resampling_method : max
+    #   min_image: 0
+    #   max_image: 40
+    #   open_even_oob : True
+
+    # height_2_pred : 
+    #   _target_: src.results.get_images_utils.image_loader_model
+    #   path: /work/work/sera/logs/change_detections/Open_canopy/data/predictions_2.tif
+    #   resolution: ${resolution}
+    #   resampling_method : max
+    #   min_image: 0
+    #   max_image: 40
+    #   open_even_oob: True
+
+    difference_pred : 
+      _target_: src.results.get_images_utils.image_loader_model
+      path: /work/work/sera/logs/sera_predictions/${model}/v${nb_version_model}_${model}/${prediction_type}/predictions/data/pred/full_${model}_pred.vrt
+      resolution: ${resolution}
+      resampling_method : mean
+      min_image: ${min_diff}
+      max_image: ${max_diff}
+
+    difference_target : 
+      _target_: src.results.get_images_utils.image_loader_model
+      path: /work/work/sera/logs/sera_predictions/ic_d_OpenCanopy/v1_ic_d_OpenCanopy/${prediction_type}/predictions/data/target/full_ic_d_OpenCanopy_target.vrt
+      resolution: ${resolution}
+      resampling_method : mean
+      min_image: ${min_diff}
+      max_image: ${max_diff}
+
+  image_computed_set:
+    # difference_pred : 
+    #   _target_: src.results.get_images_utils.difference_computer
+    #   input_name_1: height_1_pred
+    #   input_name_2: height_2_pred
+    #   min_image: ${min_diff}
+    #   max_image: ${max_diff}
+
+    ctd_pred :
+      _target_: src.results.get_images_utils.change_threshold_computer
+      input_name: difference_pred
+      threshold : ${threshold}
+      min_area :  ${min_area}
+      
+    
+    ctd_target :
+      _target_: src.results.get_images_utils.change_threshold_computer
+      input_name: difference_target
+      threshold : ${threshold}
+      min_area :  ${min_area}
+
+
+get_metrics_local : 
+  _target_ : src.results.get_metrics_local_utils.get_metrics_local
+  metrics_set :
+    mae_diff :
+      _target_ : src.results.get_metrics_local_utils.mae_local_computer
+      name_image_1: difference_pred
+      name_image_2: difference_target
+    mae_lower_diff:
+      _target_ : src.results.get_metrics_local_utils.mae_lower_than_local_computer
+      name_image_1: difference_pred
+      name_image_2: difference_target
+      threshold : -1
+    rmse_diff :
+      _target_ : src.results.get_metrics_local_utils.rmse_local_computer
+      name_image_1: difference_pred
+      name_image_2: difference_target
+    bias_diff :
+      _target_ : src.results.get_metrics_local_utils.bias_local_computer
+      name_image_1: difference_pred
+      name_image_2: difference_target
+
+    recall_change :
+      _target_ : src.results.get_metrics_local_utils.recall_local_computer
+      name_image_1: ctd_pred
+      name_image_2: ctd_target
+    precision_change :
+      _target_ : src.results.get_metrics_local_utils.precision_local_computer
+      name_image_1: ctd_pred
+      name_image_2: ctd_target
+    f1_score_change :
+      _target_ : src.results.get_metrics_local_utils.f1_score_local_computer
+      name_image_1: ctd_pred
+      name_image_2: ctd_target
+
+    true_positive_change :
+      _target_ : src.results.get_metrics_local_utils.true_positive_local_computer
+      name_image_1: ctd_pred
+      name_image_2: ctd_target
+    false_positive_change :
+      _target_ : src.results.get_metrics_local_utils.false_positive_local_computer
+      name_image_1: ctd_pred
+      name_image_2: ctd_target
+    false_negative_change :
+      _target_ : src.results.get_metrics_local_utils.false_negative_local_computer
+      name_image_1: ctd_pred
+      name_image_2: ctd_target
+
+get_metrics_global:
+  _target_ : src.results.get_metrics_global_utils.get_metrics_global
+  metrics_set :
+    mae_diff :
+      _target_ : src.results.get_metrics_global_utils.mean_global_computeur
+      name_metric_by_image : mae_diff
+    mae_lower_diff:
+      _target_ : src.results.get_metrics_global_utils.mean_global_computeur
+      name_metric_by_image : mae_lower_diff
+    rmse_diff :
+      _target_ : src.results.get_metrics_global_utils.mean_global_computeur
+      name_metric_by_image : rmse_diff
+      root : True
+    bias_diff :
+      _target_ : src.results.get_metrics_global_utils.mean_global_computeur
+      name_metric_by_image : bias_diff
+
+    recall_change :
+      _target_ : src.results.get_metrics_global_utils.recall_global_computer
+      name_true_positive: true_positive_change
+      name_false_negative: false_negative_change
+    precision_change :
+      _target_ : src.results.get_metrics_global_utils.precision_global_computer
+      name_true_positive: true_positive_change
+      name_false_positive: false_positive_change
+    f1_score_change :
+      _target_ : src.results.get_metrics_global_utils.f1_score_global_computer
+      name_true_positive: true_positive_change
+      name_false_negative: false_negative_change
+      name_false_positive: false_positive_change
+
+
+get_plots: 
+  _target_: src.results.get_plots_utils.get_plots
+  save_dir : ${save_dir}/${version_metrics_type}/figures
+  nb_plots: 20
+  plot_set :
+    diff_and_changes :
+      _target_ : src.results.get_plots_utils.plot_model
+      nb_row: 3
+      nb_col : 3
+      size_plot: 15
+      graph_list :
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: "Input year 1"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : input_year_1
+            channels_to_keep: ${channel_input_plot}
+            patch_size_percentage: ${patch_size_plot}
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 1
+          graph_title: "Input year 2"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : input_year_2
+            channels_to_keep: ${channel_input_plot}
+            patch_size_percentage: ${patch_size_plot}
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 1
+          idx_col: 0
+          graph_title: "Difference map pred"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : difference_pred
+            cmap: RdYlGn
+            norm : 
+              _target_ : matplotlib.colors.TwoSlopeNorm
+              vmin: -20
+              vcenter: 0 
+              vmax : 5
+            channels_to_keep: null
+            patch_size_percentage: ${patch_size_plot}
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 1
+          idx_col: 1
+          graph_title: "Difference map target"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : difference_target
+            cmap: RdYlGn
+            norm : 
+              _target_ : matplotlib.colors.TwoSlopeNorm
+              vmin: -20
+              vcenter: 0 
+              vmax : 5
+            channels_to_keep: null
+            patch_size_percentage: ${patch_size_plot}
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 2
+          idx_col: 0
+          graph_title: "Change map pred"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : ctd_pred
+            cmap: inferno
+            norm : null
+            channels_to_keep: null
+            patch_size_percentage: ${patch_size_plot}
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 2
+          idx_col: 1
+          graph_title: "Change map target"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : ctd_target
+            cmap: inferno
+            norm : null
+            channels_to_keep: null
+            patch_size_percentage: ${patch_size_plot}
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 2
+          rowspan: 3
+          graph_title: "Score pred vs target"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_bar
+            metrics_list : [recall_change, precision_change, f1_score_change]
+            y_min : 0
+            y_max : 1
+
+    single_img_diff_pred :
+      _target_ : src.results.get_plots_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot: 10
+      graph_list : 
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: null
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : difference_pred
+            cmap: RdYlGn
+            norm : 
+              _target_ : matplotlib.colors.TwoSlopeNorm
+              vmin: -20
+              vcenter: 0 
+              vmax : 5
+            channels_to_keep: null
+            patch_size_percentage: ${patch_size_plot}
+    
+    single_img_change_pred :
+      _target_ : src.results.get_plots_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot: 10
+      graph_list : 
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: null
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : ctd_pred
+            cmap: inferno
+            norm : null
+            channels_to_keep: null
+            patch_size_percentage: ${patch_size_plot}
+
+    single_img_input_1 :
+      _target_ : src.results.get_plots_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot: 10
+      graph_list : 
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: null
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : input_year_1
+            channels_to_keep: ${channel_input_plot}
+            patch_size_percentage: ${patch_size_plot}
+            
+    single_img_input_2 :
+      _target_ : src.results.get_plots_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot: 10
+      graph_list : 
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: null
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : input_year_2
+            channels_to_keep: ${channel_input_plot}
+            patch_size_percentage: ${patch_size_plot}
+    
+    single_img_diff_target :
+      _target_ : src.results.get_plots_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot: 10
+      graph_list : 
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: null
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : difference_target
+            cmap: RdYlGn
+            norm : 
+              _target_ : matplotlib.colors.TwoSlopeNorm
+              vmin: -20
+              vcenter: 0 
+              vmax : 5
+            patch_size_percentage: ${patch_size_plot}
+    
+    single_img_change_target :
+      _target_ : src.results.get_plots_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot: 10
+      graph_list : 
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: null
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : ctd_target
+            cmap: inferno
+            norm : null
+            patch_size_percentage: ${patch_size_plot}

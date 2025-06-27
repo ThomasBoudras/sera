@@ -1,0 +1,5 @@
+_target_: src.datamodules.datasets.get_inputs.s1_s2_timeseries_change.get_s1_s2_timeseries_images
+input_path: ${datamodule.dataset.input_path}
+input_resolution: ${datamodule.dataset.input_resolution}
+nb_timeseries_image: 16
+duplication_level_noise: null

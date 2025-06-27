@@ -1,0 +1,168 @@
+# @package _global_
+
+metrics_type : change_detections
+# prediction_type : geometries_test
+prediction_type : chantilly
+model : dp_EDSR_UTAES_diff_SL1_16img
+nb_version_model: 9
+
+min_area : 100
+threshold : -0.5
+min_diff : -1
+max_diff : 0.3
+resolution : 2.5
+seed : 12345
+
+save_dir : /work/work/sera/logs/${metrics_type}/${model}
+output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
+version_metrics_type : dp${mul:-1,${threshold}}_ma${min_area}_res${from_float_to_str:${resolution}}
+geometries_path : /work/work/sera/logs/sera_predictions/${model}/v${nb_version_model}_${model}/${prediction_type}/predictions/geometries.geojson
+
+hydra:
+  run:
+    dir: ${save_dir}/${version_metrics_type}
+
+get_images : 
+  _target_ : src.results.get_images_utils.get_images
+  image_loaded_set:
+    difference_pred : 
+      _target_: src.results.get_images_utils.image_loader_model
+      path: /work/work/sera/logs/sera_predictions/${model}/v${nb_version_model}_${model}/${prediction_type}/predictions/data/preds/${model}_full_pred.vrt
+      resolution: ${resolution}
+      resampling_method : mean
+      scaling_factor: 1
+      min_image: ${min_diff}
+      max_image: ${max_diff}
+
+    difference_target : 
+      _target_: src.results.get_images_utils.image_loader_model
+      path: /work/work/sera/logs/sera_predictions/dph_EDSR_UTAE_SL1_32img/v4_dh_EDSR_UTAE_SL1_32img/${prediction_type}/predictions/data/targets/dh_EDSR_UTAE_SL1_32img_full_target.vrt
+      resolution: ${resolution}
+      resampling_method : mean
+      scaling_factor: 1
+      min_image: ${min_diff}
+      max_image: ${max_diff}
+
+  image_computed_set:
+    cp_pred :
+      _target_: src.results.get_images_utils.change_threshold_computer
+      input_name: difference_pred
+      threshold : ${threshold}
+      min_area :  ${min_area}
+    
+    cp_target :
+      _target_: src.results.get_images_utils.change_threshold_computer
+      input_name: difference_target
+      threshold : ${threshold}
+      min_area :  ${min_area}
+
+
+get_metrics : 
+  _target_ : src.results.get_metrics_utils.get_metrics
+  metrics_set :
+    mae_diff :
+      _target_ : src.results.get_metrics_utils.mae_computer
+      name_image_1: difference_pred
+      name_image_2: difference_target
+    mae_lower_10p_diff:
+      _target_ : src.results.get_metrics_utils.mae_lower_than_computer
+      name_image_1: difference_pred
+      name_image_2: difference_target
+      threshold : -0.1
+    rmse_diff :
+      _target_ : src.results.get_metrics_utils.rmse_computer
+      name_image_1: difference_pred
+      name_image_2: difference_target
+    bias_diff :
+      _target_ : src.results.get_metrics_utils.bias_computer
+      name_image_1: difference_pred
+      name_image_2: difference_target
+
+    recall_change :
+      _target_ : src.results.get_metrics_utils.recall_computer
+      name_image_1: cp_pred
+      name_image_2: cp_target
+    precision_change :
+      _target_ : src.results.get_metrics_utils.precision_computer
+      name_image_1: cp_pred
+      name_image_2: cp_target
+    f1_score_change :
+      _target_ : src.results.get_metrics_utils.f1_score_computer
+      name_image_1: cp_pred
+      name_image_2: cp_target
+
+get_plots: 
+  _target_: src.results.get_plots_utils.get_plots
+  save_dir : ${save_dir}/${version_metrics_type}/figures
+  nb_plots: 20
+  plot_set :
+    diff_and_changes :
+      _target_ : src.results.get_plots_utils.plot_model
+      nb_row: 2
+      nb_col : 3
+      size_plot: 10
+      graph_list : 
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: "Difference map pred"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : difference_pred
+            cmap: RdYlGn
+            norm : 
+              _target_ : matplotlib.colors.TwoSlopeNorm
+              vmin: -20
+              vcenter: 0 
+              vmax : 5
+            channels_to_keep: null
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 1
+          graph_title: "Difference map target"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : difference_target
+            cmap: RdYlGn
+            norm : 
+              _target_ : matplotlib.colors.TwoSlopeNorm
+              vmin: -20
+              vcenter: 0 
+              vmax : 5
+            channels_to_keep: null
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 1
+          idx_col: 0
+          rowspan: 1
+          colspan: 1
+          graph_title: "Change map pred"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : cp_pred
+            cmap: inferno
+            norm : null
+            channels_to_keep: null
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 1
+          idx_col: 1
+          graph_title: "Change map target"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_imshow 
+            image_name : cp_target
+            cmap: inferno
+            norm : null
+            channels_to_keep: null
+
+        - _target_: src.results.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 2
+          rowspan: 2
+          graph_title: "Score pred vs target"
+          method_graph: 
+            _target_: src.results.get_plots_utils.method_bar
+            metrics_list : [recall_change, precision_change, f1_score_change]
+            y_min : 0
+            y_max : 1

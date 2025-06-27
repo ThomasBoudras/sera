@@ -1,0 +1,71 @@
+defaults :
+  - method_change : threshold_method
+  - additional_transform_input : none
+  - additional_transform_target : none
+  - get_inputs : s1_s2_composites_change
+  - get_targets : lidar_change
+  
+input_path: ./
+target_path: ./
+geometries_path: ./
+input_resolution: 10
+target_resolution: 2.5
+
+train_dataset: 
+  _target_: src.datamodules.datasets.change_dataset.changeDataset
+  input_resolution: ${datamodule.dataset.input_resolution}  
+  patch_size_input: ${datamodule.instance.patch_size_input}
+  method_change : ${datamodule.dataset.method_change}
+  prediction_mode : False
+  geometries_path: ${datamodule.dataset.geometries_path}
+  data_augmentation : True
+  get_inputs :  ${datamodule.dataset.get_inputs}
+  get_targets : ${datamodule.dataset.get_targets}
+  additional_transform_input : ${datamodule.dataset.additional_transform_input.transforms}
+  additional_transform_target : ${datamodule.dataset.additional_transform_target.transforms}
+  split: train
+
+
+val_dataset:
+  _target_: src.datamodules.datasets.change_dataset.changeDataset
+  input_resolution: ${datamodule.dataset.input_resolution}  
+  patch_size_input: ${datamodule.instance.patch_size_input}
+  method_change : ${datamodule.dataset.method_change}
+  prediction_mode : False
+  geometries_path: ${datamodule.dataset.geometries_path}
+  data_augmentation : False
+  get_inputs :  ${datamodule.dataset.get_inputs}
+  get_targets : ${datamodule.dataset.get_targets}
+  additional_transform_input : ${datamodule.dataset.additional_transform_input.transforms}
+  additional_transform_target : ${datamodule.dataset.additional_transform_target.transforms}
+  split: val
+
+test_dataset:
+  _target_: src.datamodules.datasets.change_dataset.changeDataset
+  input_resolution: ${datamodule.dataset.input_resolution}  
+  patch_size_input: ${datamodule.instance.patch_size_input}
+  method_change : ${datamodule.dataset.method_change}
+  prediction_mode : False
+  geometries_path: ${datamodule.dataset.geometries_path}
+  data_augmentation : False
+  get_inputs :  ${datamodule.dataset.get_inputs}
+  get_targets : ${datamodule.dataset.get_targets}
+  additional_transform_input : ${datamodule.dataset.additional_transform_input.transforms}
+  additional_transform_target : ${datamodule.dataset.additional_transform_target.transforms}
+  split: test
+
+predict_dataset : 
+  _target_: src.datamodules.datasets.change_dataset.changeDataset
+  input_resolution: ${datamodule.dataset.input_resolution}  
+  patch_size_input: ${datamodule.instance.patch_size_input}
+  method_change : ${datamodule.dataset.method_change}
+  prediction_mode : True
+  geometries_path: ${datamodule.dataset.geometries_path}
+  data_augmentation : False
+  get_inputs :  ${datamodule.dataset.get_inputs}
+  get_targets : 
+    _target_: src.datamodules.datasets.get_targets.nan_change.get_nan
+  additional_transform_input : ${datamodule.dataset.additional_transform_input.transforms}
+  additional_transform_target : ${datamodule.dataset.additional_transform_target.transforms}
+  split: null
+  
