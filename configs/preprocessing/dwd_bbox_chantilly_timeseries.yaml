@@ -1,0 +1,27 @@
+dates :
+  - "2022/02/15" 
+  - "2023/09/15"
+
+data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data/sentinel/timeseries/chantilly
+
+bbox:
+  left : 653200
+  bottom : 6886300
+  right : 672600
+  top : 6906600
+
+resolution : 10
+tile_shape : 5000
+max_tile_size : 10
+cloudless_portion : 60
+cloud_prb : 40
+country : "France"
+composite_method_s1 : TIMESERIES
+composite_method_s2 : TIMESERIES
+duration : 60
+s1_orbit: BOTH
+
+hydra:
+  run :
+    dir : ${data_dir}/logs
+  output_subdir : hydra_logs

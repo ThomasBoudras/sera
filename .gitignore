@@ -145,4 +145,5 @@ logs/
 wandb/
 .env
 .autoenv
+.vscode/
 batch/

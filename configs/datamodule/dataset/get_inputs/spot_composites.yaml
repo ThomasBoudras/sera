@@ -1,0 +1,5 @@
+_target_: src.datamodule.dataset.get_inputs.spot_composites.getSpotComposites
+inputs_path: ${data_dir}/spot/
+resolution_input: ${datamodule.dataset.resolution_input}
+date_column: lidar_acquisition_date
+resampling_method: bilinear

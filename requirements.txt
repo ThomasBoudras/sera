@@ -11,7 +11,7 @@ hydra-colorlog==1.2.0
 hydra-optuna-sweeper==1.2.0
 
 # --------- loggers --------- #
-wandb==0.18.5
+tensorboard==2.20.0
 
 # --------- linters --------- #
 pre-commit==4.0.1      # hooks for applying linters on commit

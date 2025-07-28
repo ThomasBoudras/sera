@@ -1,33 +1,30 @@
 # @package _global_
 
-# specify here default training configuration
 defaults:
     - _self_
     - trainer: default.yaml
-    - model: module.yaml
+    - module: module.yaml
     - datamodule: datamodule.yaml
-    - callbacks: wandb.yaml # set this to null if you don't want to use callbacks
-    - logger: wandb.yaml # set logger here or use command line (e.g. `python run.py logger=wandb`)
-
-    - experiment: null
-    - predict: null
-    - test : null
-    - hparams_search: null
-
+    - callbacks: tensorboard.yaml 
+    - logger: tensorboard.yaml 
     - hydra: default.yaml
 
-debug: False #run 1 train, val and test loop with only 1 batch
-print_config: True
-ignore_warnings: True
-test_after_training: True
-seed: 12345
+    - train: null
+    - predict: null
+    - test : null
+
+
 
 project : "sera"
-run_name: default_run
-run_version: ${run_name}_main
-only_test : False
+run_name: sera_h
+run_version: v1_${run_name}
+test_after_training: True
+print_config: True
+seed: 12345
+
 work_dir: ${hydra:runtime.cwd}
-log_dir: ${work_dir}/logs/${project}/${run_name}/${run_version}
 data_dir: ./
+log_dir: ${data_dir}/logs/${project}/${run_name}/${run_version}
+
 ckpt_path: null
 load_just_weights: False

@@ -1,0 +1,98 @@
+defaults :
+  - get_inputs : s1_s2_timeseries
+  - get_targets : lidar
+  - get_changes : calculator_difference
+
+gdf_path: ${data_dir}/sentinel/timeseries/lidarhd/gdf_change_map_clean.geojson
+resolution_input: 10
+resolution_target: 2.5
+patch_size_input: 32
+patch_size_target: 128
+
+get_inputs_t1:
+  <<: ${datamodule.dataset.get_inputs}
+  valid_column: valid_vrts_t1
+  date_column: lidar_acquisition_date_t1
+
+get_inputs_t2:
+  <<: ${datamodule.dataset.get_inputs}
+  valid_column: valid_vrts_t2
+  date_column: lidar_acquisition_date_t2
+
+get_targets_t1:
+  <<: ${datamodule.dataset.get_targets}
+  date_column: lidar_acquisition_date_t1
+  unit_column: lidar_unit_t1
+
+get_targets_t2:
+  <<: ${datamodule.dataset.get_targets}
+  date_column: lidar_acquisition_date_t2
+  unit_column: lidar_unit_t2
+
+
+train_dataset: 
+  _target_: src.datamodule.dataset.change_map_dataset.changeMapDataset
+  resolution_input: ${datamodule.dataset.resolution_input}  
+  resolution_target: ${datamodule.dataset.resolution_target}
+  patch_size_input: ${datamodule.instance.patch_size_input}
+  patch_size_target: ${datamodule.instance.patch_size_target}
+  prediction_mode : False
+  gdf_path: ${datamodule.dataset.gdf_path}
+  data_augmentation : True
+  get_inputs_t1 :  ${datamodule.dataset.get_inputs_t1}
+  get_inputs_t2 :  ${datamodule.dataset.get_inputs_t2}
+  get_targets_t1 : ${datamodule.dataset.get_targets_t1}
+  get_targets_t2 : ${datamodule.dataset.get_targets_t2}
+  get_changes : ${datamodule.dataset.get_changes}
+  stage: train
+
+val_dataset:
+  _target_: src.datamodule.dataset.change_map_dataset.changeMapDataset
+  resolution_input: ${datamodule.dataset.resolution_input}  
+  resolution_target: ${datamodule.dataset.resolution_target}
+  patch_size_input: ${datamodule.instance.patch_size_input}
+  patch_size_target: ${datamodule.instance.patch_size_target}
+  prediction_mode : False
+  gdf_path: ${datamodule.dataset.gdf_path}
+  data_augmentation : False
+  get_inputs_t1 :  ${datamodule.dataset.get_inputs_t1}
+  get_inputs_t2 :  ${datamodule.dataset.get_inputs_t2}
+  get_targets_t1 : ${datamodule.dataset.get_targets_t1}
+  get_targets_t2 : ${datamodule.dataset.get_targets_t2}
+  get_changes : ${datamodule.dataset.get_changes}
+  stage: val
+
+test_dataset:
+  _target_: src.datamodule.dataset.change_map_dataset.changeMapDataset
+  resolution_input: ${datamodule.dataset.resolution_input}  
+  resolution_target: ${datamodule.dataset.resolution_target}
+  patch_size_input: ${datamodule.instance.patch_size_input}
+  patch_size_target: ${datamodule.instance.patch_size_target}
+  prediction_mode : False
+  gdf_path: ${datamodule.dataset.gdf_path}
+  data_augmentation : False
+  get_inputs_t1 :  ${datamodule.dataset.get_inputs_t1}
+  get_inputs_t2 :  ${datamodule.dataset.get_inputs_t2}
+  get_targets_t1 : ${datamodule.dataset.get_targets_t1}
+  get_targets_t2 : ${datamodule.dataset.get_targets_t2}
+  get_changes : ${datamodule.dataset.get_changes}
+  stage: test
+
+predict_dataset : 
+  _target_: src.datamodule.dataset.change_map_dataset.changeMapDataset
+  resolution_input: ${datamodule.dataset.resolution_input}  
+  resolution_target: ${datamodule.dataset.resolution_target}
+  patch_size_input: ${datamodule.instance.patch_size_input}
+  patch_size_target: ${datamodule.instance.patch_size_target}
+  prediction_mode : True
+  gdf_path: ${datamodule.dataset.gdf_path}
+  data_augmentation : False
+  get_inputs_t1 : ${datamodule.dataset.get_inputs_t1}
+  get_inputs_t2 : ${datamodule.dataset.get_inputs_t2}
+  get_targets_t1 : 
+    _target_: src.datamodule.dataset.get_targets.nan_change.get_nan
+  get_targets_t2 : 
+    _target_: src.datamodule.dataset.get_targets.nan_change.get_nan
+  get_changes : ${datamodule.dataset.get_changes}
+  stage: predict
+  

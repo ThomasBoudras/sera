@@ -1,0 +1,11 @@
+
+defaults: 
+    - _self_
+    - model: module.yaml
+
+checkpoint_path: 
+verbose: true
+rename_rules:
+  "^module\\.": ""
+  "_bn": ".bn"
+  "conv(\\d+)": "conv\\1"

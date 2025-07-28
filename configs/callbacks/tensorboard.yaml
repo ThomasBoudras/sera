@@ -1,0 +1,15 @@
+defaults:
+    - default.yaml
+
+log_image_predictions:
+    _target_: src.callbacks.log_images.LogImages
+    num_samples: 8
+    freq_train : null
+    prepare_images:
+      _target_: src.callbacks.log_images_utils.height_map_mode
+      min_value_normalization: 0
+      max_value_normalization: 40
+      colormap: "magma"
+    log_inputs:
+      _target_: src.callbacks.log_images_utils.log_5d_s1_s2_images
+      max_nb_timeseries_input: 4

@@ -1,8 +1,0 @@
-defaults:
-  - regression: UNet
-  - _self_
-
-
-instance:
-  _target_: src.models.networks.classic_network.classicNetwork
-  regression_model: ${model.network.regression}

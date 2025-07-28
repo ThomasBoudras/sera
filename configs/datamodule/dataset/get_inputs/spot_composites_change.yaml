@@ -1,3 +1,0 @@
-_target_: src.datamodules.datasets.get_inputs.spot_composites_change.get_spot_composites_images
-input_path: ${datamodule.dataset.input_path}
-input_resolution: ${datamodule.dataset.input_resolution}

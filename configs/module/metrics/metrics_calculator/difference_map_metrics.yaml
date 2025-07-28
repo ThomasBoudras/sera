@@ -1,0 +1,2 @@
+_target_: src.module.metrics.metrics_calculator.difference_map_metrics.differenceMapMetrics
+delta_threshold: -10

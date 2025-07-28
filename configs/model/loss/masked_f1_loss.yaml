@@ -1,2 +1,0 @@
-_target_: src.models.loss.masked_f1_loss.F1Loss
-epsilon: 1e-8

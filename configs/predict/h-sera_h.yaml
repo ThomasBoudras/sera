@@ -1,0 +1,22 @@
+# @package _global_
+
+
+
+train_dataset: null
+
+val_dataset: null
+
+test_dataset: null
+
+predict_dataset : 
+  _target_: src.datamodule.dataset.height_map_dataset.heightMapDataset
+  resolution_input: ${datamodule.dataset.resolution_input} 
+  resolution_target: ${datamodule.dataset.resolution_target}
+  patch_size_input: ${datamodule.dataset.patch_size_input}
+  patch_size_target: ${datamodule.dataset.patch_size_target}
+  gdf_path: ${datamodule.dataset.gdf_path}
+  data_augmentation : False
+  get_inputs :  ${datamodule.dataset.get_inputs}
+  get_targets:
+    _target_: src.datamodule.dataset.get_targets.nan.getNan
+  stage: predict

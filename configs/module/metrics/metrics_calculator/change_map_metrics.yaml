@@ -1,0 +1,2 @@
+_target_: src.module.metrics.metrics.change_metrics
+threshold_change: 0.5

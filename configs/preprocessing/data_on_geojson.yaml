@@ -1,0 +1,8 @@
+save_dir: /home/tboudras/code/data/utils
+min_n_days: 30
+max_n_days: 120
+list_date_field: valid_vrts
+ref_date_field: lidar_acquisition_date
+confidence_level: 0.95
+resolution: 10
+geojson_path: /home/tboudras/code/data/utils/gdf_height_map_clean.geojson

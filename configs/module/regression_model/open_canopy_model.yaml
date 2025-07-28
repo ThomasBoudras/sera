@@ -1,0 +1,13 @@
+_target_: src.module.regression_model.open_canopy_model.OpenCanopyModel
+backbone: pvt_v2_b3.in1k
+num_channels: 4
+num_classes: 1
+segmentation_head:
+  _partial_: True
+  _target_: src.module.regression_model.components.open_canopy_utils.SimpleSegmentationHead
+  decoder_stride: 32
+pretrained: True
+pretrained_path: ${data_dir}/pretrained_models/pvt_v2_b3.in1k.bin
+img_size : ${data.imagesize}
+lora_rank: 0
+

@@ -1,3 +1,0 @@
-_target_: src.datamodules.datasets.change_method.difference_method
-min_difference: -40
-max_difference : 5

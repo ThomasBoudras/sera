@@ -1,4 +1,0 @@
-_target_: src.datamodules.datasets.get_targets.lidar_change.get_lidar_images
-target_path: ${datamodule.dataset.target_path}
-target_resolution: ${datamodule.dataset.target_resolution}
-replace_nan_by_zero_in_target: False

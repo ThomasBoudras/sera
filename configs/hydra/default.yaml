@@ -4,4 +4,4 @@ run:
 sweep:
     dir: ${log_dir}/multiruns/
     subdir: ${hydra.job.num}
-
+output_subdir: hydra_outputs

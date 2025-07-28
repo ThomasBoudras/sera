@@ -1,2 +1,0 @@
-_target_: src.models.loss.masked_bce_loss.masked_bce_loss
-reduction: mean   
