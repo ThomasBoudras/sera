@@ -53,18 +53,18 @@ class changeMapMetrics :
 
         # If there are values, compute metrics
         if nb_values > 0 :
-            final_results[f"continuous_recall"] = continuous_intersection / target_sum if target_sum > 0 else torch.nan 
-            final_results[f"continuous_precision"] = continuous_intersection/continuous_pred_sum if continuous_pred_sum > 0 else torch.nan 
-            final_results[f"continuous_f1_score"] = 2*continuous_intersection/(continuous_pred_sum+target_sum) if continuous_pred_sum+target_sum > 0 else torch.nan
+            final_results[f"continuous_recall"] = (continuous_intersection / target_sum).to(torch.float32) if target_sum > 0 else torch.nan 
+            final_results[f"continuous_precision"] = (continuous_intersection/continuous_pred_sum).to(torch.float32) if continuous_pred_sum > 0 else torch.nan 
+            final_results[f"continuous_f1_score"] = (2*continuous_intersection/(continuous_pred_sum+target_sum)).to(torch.float32) if continuous_pred_sum+target_sum > 0 else torch.nan
             
 
-            final_results[f"discrete_recall"] = discrete_intersection/target_sum if target_sum > 0 else torch.nan 
-            final_results[f"discrete_precision"] = discrete_intersection /discrete_pred_sum if discrete_pred_sum > 0 else torch.nan 
-            final_results[f"discrete_f1_score"] = 2*discrete_intersection/(discrete_pred_sum+target_sum) if discrete_pred_sum+target_sum > 0 else torch.nan
+            final_results[f"discrete_recall"] = (discrete_intersection/target_sum).to(torch.float32) if target_sum > 0 else torch.nan 
+            final_results[f"discrete_precision"] = (discrete_intersection /discrete_pred_sum).to(torch.float32) if discrete_pred_sum > 0 else torch.nan 
+            final_results[f"discrete_f1_score"] = (2*discrete_intersection/(discrete_pred_sum+target_sum)).to(torch.float32) if discrete_pred_sum+target_sum > 0 else torch.nan
             
-            final_results["bce_loss"] = sum_bce_per_element / nb_values 
+            final_results["bce_loss"] = (sum_bce_per_element / nb_values).to(torch.float32)
 
-            final_results["nb_values"] = nb_values
+            final_results["nb_values"] = nb_values.to(torch.float32)
 
         else :
             # If no values, set all metrics to NaN

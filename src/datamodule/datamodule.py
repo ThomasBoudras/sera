@@ -41,7 +41,6 @@ class Datamodule(L.LightningDataModule):
     def prepare_data(self):
         log.info(f"## Local save dir {self.trainer.log_dir} ##")
 
-
         #Calculate normalisation moments for input images
         if not (self.normalization_save_path / "mean.npy").exists():
             if not self.normalization_save_path.exists():
@@ -84,7 +83,7 @@ class Datamodule(L.LightningDataModule):
         log.info(f"## values std : {self.input_std}  ##")
 
         # Once we have moment we add normalization transform to dataset
-        transform_input = v2.Compose([v2.ToTensor(), v2.Normalize(mean=self.input_mean, std=self.input_std)])
+        transform_input = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True), v2.Normalize(mean=self.input_mean, std=self.input_std)])
         if self.train_dataset is not None :
             self.train_dataset.transform_input = transform_input
         if self.val_dataset is not None :

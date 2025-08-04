@@ -44,7 +44,7 @@ class maskedForestMetrics(Metric):
                     bounds=bounds.tolist(),
                     classes_to_keep=self.classes_to_keep,
                     resolution=self.resolution_target,
-                    resampling_method="bilinear",
+                    resampling_method="nearest", #we load a mask, nearest is the best for this case
                 )
                 mask = torch.from_numpy(np.expand_dims(mask, axis=0)).to(target.device)
                 vegetation_mask.append(mask)

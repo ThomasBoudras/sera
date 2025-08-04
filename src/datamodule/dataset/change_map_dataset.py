@@ -41,8 +41,8 @@ class changeMapDataset(Dataset):
         self.stage = stage
         self.gdf = self.prepare_gdf()
 
-        self.transform_input = v2.ToTensor()
-        self.transform_target = v2.ToTensor()
+        self.transform_input = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
+        self.transform_target = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
 
     def __len__(self):
         return len(self.gdf)

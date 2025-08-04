@@ -100,7 +100,7 @@ def get_window(
         if resolution is not None  and init_resolution != resolution :
             
             # case support by rasterio
-            if resampling_method in {"bilinear", "cubic", "cubic_spline", "lanczos"} :
+            if resampling_method in {"bilinear", "cubic", "cubic_spline", "lanczos", "nearest"} :
                     window_height, window_width = int(real_height/resolution), int(real_width/resolution)
                     resampling = getattr(Resampling, resampling_method)
             
@@ -139,7 +139,7 @@ def get_window(
             )
 
         # come back of the case not supported by rasterio
-        if resolution is not None and resolution != init_resolution and resampling_method not in {"bilinear", "cubic", "nearest"} :
+        if resolution is not None and resolution != init_resolution and resampling_method not in {"bilinear", "cubic", "cubic_spline", "lanczos", "nearest"} :
             # We assume the resolutions are in meters and with a precision of 1 decimeter (e.g., 1.5m). 
             # we also assume that the real height is divisible by the resolution.
             # We compute the greatest common divisor (GCD) of the two resolutions.            

@@ -55,22 +55,22 @@ class heightMapMetrics :
         if nb_values > 0 :
             # ME - Mean Error
             me = sum_error / nb_values
-            final_results[f"ME"] = me
+            final_results[f"ME"] = me.to(torch.float32)
 
             # MAE - Mean Absolute Error
             mae = sum_absolute_error / nb_values
-            final_results[f"MAE"] = mae
+            final_results[f"MAE"] = mae.to(torch.float32)
 
             # RMSE - Root Mean Square Error
-            final_results[f"RMSE"] = torch.sqrt(sum_squared_error / nb_values)
+            final_results[f"RMSE"] = torch.sqrt(sum_squared_error / nb_values).to(torch.float32)
 
-            final_results[f"nMAE"] = sum_relative_error / nb_values_min_height
+            final_results[f"nMAE"] = (sum_relative_error / nb_values_min_height).to(torch.float32)
 
             # TreeCov - Treecover IoU
-            final_results[f"TreeCov"] = intersection / (union + 1) if union > 0 else torch.nan
+            final_results[f"TreeCov"] = (intersection / (union + 1)).to(torch.float32) if union > 0 else torch.nan
 
             #nb_values - Number of values
-            final_results["nb_values"] = nb_values
+            final_results["nb_values"] = nb_values.to(torch.float32)
         else :
             # If no values, set all metrics to NaN
             final_results[f"ME"] = torch.nan

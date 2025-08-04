@@ -48,21 +48,21 @@ class differenceMapMetrics :
         if nb_values > 0 :
             # ME - Mean Error
             me = sum_error / nb_values
-            final_results[f"ME"] = me
+            final_results[f"ME"] = me.to(torch.float32)
 
             # MAE - Mean Absolute Error
             mae = sum_absolute_error / nb_values
-            final_results[f"MAE"] = mae
+            final_results[f"MAE"] = mae.to(torch.float32)
 
             # RMSE - Root Mean Square Error
-            final_results[f"RMSE"] = torch.sqrt(sum_squared_error / nb_values)
+            final_results[f"RMSE"] = torch.sqrt(sum_squared_error / nb_values).to(torch.float32)
 
             # Recall, Precision and F1 score
-            final_results[f"recall"] = change_intersection / change_target_sum if change_target_sum > 0 else torch.nan 
-            final_results[f"precision"] = change_intersection/change_pred_sum if change_pred_sum > 0 else torch.nan 
-            final_results[f"f1_score"] = 2*change_intersection/(change_pred_sum + change_target_sum) if change_pred_sum + change_target_sum > 0 else torch.nan
+            final_results[f"recall"] = (change_intersection / change_target_sum).to(torch.float32) if change_target_sum > 0 else torch.nan 
+            final_results[f"precision"] = (change_intersection/change_pred_sum).to(torch.float32) if change_pred_sum > 0 else torch.nan 
+            final_results[f"f1_score"] = (2*change_intersection/(change_pred_sum + change_target_sum)).to(torch.float32) if change_pred_sum + change_target_sum > 0 else torch.nan
 
-            final_results["nb_values"] = nb_values
+            final_results["nb_values"] = nb_values.to(torch.float32)
         else :
             # If no values, set all metrics to NaN
             final_results[f"ME"] = torch.nan
