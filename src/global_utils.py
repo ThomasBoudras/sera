@@ -32,7 +32,7 @@ def print_config(
     config: DictConfig,
     fields = (
         "trainer",
-        "model",
+        "module",
         "datamodule",
         "callbacks",
         "logger",

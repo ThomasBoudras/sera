@@ -33,7 +33,6 @@ class OpenCanopyModel(nn.Module):
             pretrained (bool): Whether to use pretrained weights. Default is True.
             pretrained_path (str): Path to the pretrained weights file. Default is None.
             img_size (int): Size of the input image. Default is 512.
-            chkpt_path (str): Path to the checkpoint file. Default is None.
         """
         super().__init__()
         self.backbone = backbone
@@ -56,7 +55,6 @@ class OpenCanopyModel(nn.Module):
                 "img_size": self.img_size,
                 "features_only": True,
             }
-            print(f"{additional_arg=}")
         elif backbone.startswith("pvt_v2"):
             additional_arg = {"features_only": True}
         elif backbone.startswith("twins_pcpvt"):
@@ -135,4 +133,4 @@ class OpenCanopyModel(nn.Module):
         x = self.model.forward_features(x)
 
         x = self.seg_head(x)
-        return {"out": x}
+        return x

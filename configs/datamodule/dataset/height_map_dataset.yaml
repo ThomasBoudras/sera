@@ -2,7 +2,7 @@ defaults :
   - get_inputs : s1_s2_timeseries
   - get_targets : lidar
 
-gdf_path: ${data_dir}/sentinel/timeseries/lidarhd/gdf_height_map_clean.geojson
+gdf_path: ${data_dir}/sentinel/timeseries/lidarhd/gdf_height_map_timeseries.geojson
 resolution_input: 10
 resolution_target: 2.5
 patch_size_input: 32

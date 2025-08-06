@@ -8,6 +8,6 @@ segmentation_head:
   decoder_stride: 32
 pretrained: True
 pretrained_path: ${data_dir}/pretrained_models/pvt_v2_b3.in1k.bin
-img_size : ${data.imagesize}
-lora_rank: 0
+img_size : ${datamodule.dataset.patch_size_input}
+
 

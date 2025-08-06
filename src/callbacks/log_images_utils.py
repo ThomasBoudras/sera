@@ -123,11 +123,11 @@ class log_4d_s1_s2_images:
     Args:
         None
     """
-    def __call__(self, inputs, experiment, stage, global_step=0):
+    def __call__(self, inputs, experiment, stage):
         input_images = inputs[:, [2, 1, 0], :, :]  # Convert BGR to RGB
-        input_images = make_grid(input_images)
+        input_images = make_grid(input_images, normalize=True)
         # Log image to tensorboard
-        experiment.add_image(f"input_images/{stage}", input_images, global_step=global_step)
+        experiment.add_image(f"input_images/{stage}", input_images, global_step=0)
 
 class log_5d_s1_s2_images:
     """
@@ -139,16 +139,16 @@ class log_5d_s1_s2_images:
     def __init__(self, max_nb_timeseries_input):
         self.max_nb_timeseries_input = max_nb_timeseries_input
 
-    def __call__(self, inputs, experiment, stage, global_step=0):
+    def __call__(self, inputs, experiment, stage):
         input_images = inputs[:, :, [2, 1, 0], :, :]  # Convert BGR to RGB
         median_inputs = input_images.median(dim=1).values
         median_inputs = make_grid(median_inputs, normalize=True)
-        experiment.add_image(f"input_images/{stage}/median", median_inputs, global_step=global_step)  # As the input are the same each epoch, we dont specify the epoch
+        experiment.add_image(f"input_images/{stage}/median", median_inputs, global_step=0)  # As the input are the same each epoch, we dont specify the epoch
 
         for t in range(min(input_images.shape[1], self.max_nb_timeseries_input)):
             input_images_t = input_images[:, t, :, :, :]
             input_images_t = make_grid(input_images_t, normalize=True)
-            experiment.add_image(f"input_images/{stage}/time_{t}", input_images_t)  # As the input are the same each epoch, we dont specify the epoch
+            experiment.add_image(f"input_images/{stage}/time_{t}", input_images_t, global_step=0)  # As the input are the same each epoch, we dont specify the epoch
         
 
 class log_4d_spot_images:
@@ -160,5 +160,5 @@ class log_4d_spot_images:
     """
     def __call__(self, inputs, experiment, stage):
         input_images = inputs[:, :3, :, :]  # Keep just RGB 
-        input_images = make_grid(input_images)
+        input_images = make_grid(input_images, normalize=True)
         experiment.add_image(f"input_images/{stage}", input_images, global_step=0)  # As the input are the same each epoch, we dont specify the epoch

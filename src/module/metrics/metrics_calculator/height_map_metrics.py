@@ -28,7 +28,7 @@ class heightMapMetrics :
             
             # Compute relative error metrics
             mask_min_height = masked_target >= self.min_height_nMAE
-            accumulated_metrics[f"sum_relative_error"] += torch.sum((masked_pred[mask_min_height] - masked_target[mask_min_height])/ (1 + masked_target[mask_min_height]))
+            accumulated_metrics[f"sum_relative_error"] += torch.sum(torch.abs(masked_pred[mask_min_height] - masked_target[mask_min_height])/ (1 + masked_target[mask_min_height]))
 
             # Compute tree cover metrics
             tree_cover_target = target >= self.tree_cover_threshold

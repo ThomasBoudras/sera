@@ -26,7 +26,7 @@ class EDSR(nn.Module):
         act = nn.ReLU(True)
 
         self.n_channels = n_channels
-        self.pretrained_model_path = Path(pretrained_model_path).resolve()
+        self.pretrained_model_path = Path(pretrained_model_path).resolve() if pretrained_model_path is not None else None 
 
         # define head module
         m_head = [conv2d(n_channels, n_feats, kernel_size)]

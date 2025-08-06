@@ -12,7 +12,7 @@ def main(cfg: DictConfig) -> None:
     create_vrts = hydra.utils.get_method(cfg.create_vrts)
     get_valid_vrts = hydra.utils.get_method(cfg.get_valid_vrts)
     data_dir = Path(cfg.data_dir).resolve()
-    initial_gdf = gpd.read_file(cfg.initial_gdf_path).resolve()
+    initial_gdf = gpd.read_file(cfg.initial_gdf_path)
     initial_gdf["grouping_dates"] = initial_gdf[cfg.grouping_dates].astype(str).str[:6] + "15"
     grouping_dates = initial_gdf["grouping_dates"].drop_duplicates().tolist()
     

@@ -37,14 +37,31 @@ class getS1S2Timeseries :
         self.date_column = date_column
         self.resampling_method = resampling_method
 
-    def prepare_gdf_for_inputs(self, gdf) :
-        gdf[self.vrts_column] = gdf[self.vrts_column].apply(json.loads) 
-        gdf = gdf[gdf[self.vrts_column].map(len) >= self.nb_timeseries_image_min]
-        
-        return gdf
 
     def get_date(self, str_date) :
         return datetime.strptime(str_date, "%Y%m%d")
+
+    def filter_dates(self, vrts_list, ref_date_str):
+        ref_date = self.get_date(ref_date_str)
+        filtered = [
+            dates for dates in vrts_list
+            if abs((self.get_date(dates[0]) - ref_date).days) <= self.nb_acquisition_days_max/2 # nb_acquisition_days_max is the total number of days of acquisition, before and after the reference date
+        ]
+        return filtered
+
+    def prepare_gdf_for_inputs(self, gdf) :
+        gdf[self.vrts_column] = gdf[self.vrts_column].apply(json.loads) 
+        
+        # For each row, filter the list in vrts_column to keep only dates within nb_acquisition_days_max days of the reference date (date_column)
+        if self.nb_acquisition_days_max is not None:
+            gdf[self.vrts_column] = [
+                self.filter_dates(vrts, ref_date)
+                for vrts, ref_date in zip(gdf[self.vrts_column], gdf[self.date_column])
+            ]
+        
+        # After filtering, keep only rows with at least nb_timeseries_image_min valid tuples
+        gdf = gdf[gdf[self.vrts_column].map(len) >= self.nb_timeseries_image_min].reset_index(drop=True)
+        return gdf
     
     def get_n_closest_dates(
         self,
@@ -57,12 +74,6 @@ class getS1S2Timeseries :
         """
         n_dates = min(self.nb_timeseries_image, len(dates_list))
         ref_date = self.get_date(reference_date)
-        
-        # Filter out tuples with date is in between more or less nb_acquisition_days_max/2 days from the reference date
-        dates_list = [
-            dates for dates in dates_list
-            if abs((self.get_date(dates[0]) - ref_date).days) <= self.nb_acquisition_days_max/2 # nb_acquisition_days_max is the total number of days of acquisition
-        ]
         
         # Sort the list by proximity to the reference date
         dates_list = sorted(
@@ -78,6 +89,9 @@ class getS1S2Timeseries :
         
         return dates_list
 
+    def __len__(self) :
+        return len(self.gdf)
+    
     def __call__(self, bounds, row, transform) :        
         vrts = row[self.vrts_column]
         lidar_date = row[self.date_column]

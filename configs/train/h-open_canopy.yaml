@@ -1,0 +1,34 @@
+# @package _global_
+defaults:
+    - override /module/super_resolution_model: null
+    - override /module/regression_model: open_canopy_model
+    - override /datamodule/dataset/get_inputs: spot_composites
+    - override /callbacks/image_type: spot_composites
+
+project: "train_sera"
+run_name: h-open_canopy
+run_version: v1_${run_name}
+data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
+ckpt_path: /lustre/fsn1/projects/rech/ego/uof45xi/data/pretrained_models/open_canopy.ckpt
+load_just_weights: True
+
+module:
+    instance:
+        super_resolution_model: null
+    metrics:
+        forest_mask_path: ${data_dir}/open_canopy/forest_mask.parquet
+        classification_path: ${data_dir}/open_canopy/
+
+datamodule:
+    instance:
+        normalization_save_path: ${data_dir}/normalization/spot
+    dataset:
+        gdf_path: ${data_dir}/utils/gdf_height_map_initial.geojson
+        resolution_input: 1.5
+        resolution_target: 1.5
+        patch_size_input: 224
+        patch_size_target: 224
+        get_inputs:
+            inputs_path: ${data_dir}/open_canopy/
+        get_targets:
+            targets_path: ${data_dir}/open_canopy/

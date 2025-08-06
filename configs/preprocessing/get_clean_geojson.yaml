@@ -1,8 +1,6 @@
-# root_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data/
-# gdf_path: ${root_dir}/utils/gdf_height_map.geojson
-root_dir : /home/tboudras/code/data
-gdf_path: ${root_dir}/utils/clean_geometries.geojson
-gdf_output_name: gdf_height_map_clean
+root_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data/
+gdf_path: ${root_dir}/utils/geometries.geojson
+gdf_output_name: gdf_height_map_initial
 columns_to_drop:
   - lidar_url
   - X

@@ -18,7 +18,10 @@ class getS1S2Composites:
 
     def prepare_gdf_for_inputs(self, gdf) : 
         return gdf #No preparation needed for composite image
-        
+    
+    def __len__(self) :
+        return len(self.gdf)
+    
     def __call__(self, bounds, row, transform):
         lidar_date = row[self.date_column]
 

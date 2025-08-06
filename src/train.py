@@ -2,7 +2,6 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 import torch
 from lightning import seed_everything
-from pathlib import Path
 from src import global_utils as utils
 
 log = utils.get_logger(__name__)
@@ -53,8 +52,17 @@ def train(config: DictConfig) :
         if config.load_just_weights :
             log.info(f"Start of training from checkpoint {ckpt_path} using only the weights !")
             checkpoint = torch.load(ckpt_path)
-            module.load_state_dict(checkpoint['state_dict'], strict=False)
+
+            if "state_dict" in checkpoint:
+                missing_keys, unexpected_keys = module.load_state_dict(checkpoint['state_dict'], strict=False)
+            else:
+                missing_keys, unexpected_keys = module.load_state_dict(checkpoint, strict=False)
+            
+                log.warning(f"Missing keys in checkpoint: {missing_keys}")
+                log.warning(f"Unexpected keys in checkpoint: {unexpected_keys}")
+            
             ckpt_path = None
+        
         else :
             log.info(f"Start of training from checkpoint {ckpt_path} !")
     

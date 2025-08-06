@@ -51,7 +51,7 @@ def create_vrts_timeseries(data_dir, reference_date):
     _create_vrts_from_dict(s2_vrts_path, dict_vrt_s2)
 
 
-def create_vrts_composite(data_dir, reference_date):
+def create_vrts_composites(data_dir, reference_date):
     data_dir = data_dir / f"lidar_date_{reference_date}"
     
     s1_path = data_dir / "s1"
@@ -66,7 +66,7 @@ def create_vrts_composite(data_dir, reference_date):
     for path in s1_path.rglob("*tif") :
         if "asc" in  path.stem :
             list_tif_s1_asc.append(path)
-        elif "dsc" in  path.stem :
+        elif "desc" in  path.stem :
             list_tif_s1_dsc.append(path)
         else:
             raise ValueError(f"File {path.stem} is not a valid S1 file")
@@ -126,7 +126,7 @@ def get_valid_vrts_timeseries(data_dir, geometry, grouping_date):
             return valid_vrts
         return None
     
-def get_valid_vrts_composite(data_dir, geometry, grouping_date):
+def get_valid_vrts_composites(data_dir, geometry, grouping_date):
     bounds = geometry.bounds 
 
     s1_asc_vrt = data_dir / f"lidar_date_{grouping_date}"/ "s1" / "s1_asc.vrt"

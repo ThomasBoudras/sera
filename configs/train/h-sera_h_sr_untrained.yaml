@@ -1,12 +1,14 @@
 # @package _global_
 
 project: "train_sera"
-run_name: h-sera_h
-run_version: v2_${run_name}
+run_name: h-sera_h_sr_untrained
+run_version: v1_${run_name}
 data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
 ckpt_path: last
 
 module:
+    super_resolution_model:
+        pretrained_model_path: null
     metrics:
         forest_mask_path: ${data_dir}/open_canopy/forest_mask.parquet
         classification_path: ${data_dir}/open_canopy/

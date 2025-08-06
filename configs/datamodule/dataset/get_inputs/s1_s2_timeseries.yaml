@@ -3,7 +3,7 @@ inputs_path: ${data_dir}/sentinel/timeseries/lidarhd/
 resolution_input: ${datamodule.dataset.resolution_input}
 nb_timeseries_image: 16
 nb_timeseries_image_min: 4
-nb_acquisition_days_max: 120
+nb_acquisition_days_max: null
 duplication_level_noise: null
 vrts_column: valid_vrts
 date_column: lidar_acquisition_date
