@@ -3,6 +3,7 @@ from torchvision.utils import make_grid
 from src.callbacks.log_images_utils import get_tensorboard_logger
 from lightning.pytorch import Callback
 from lightning.pytorch import Trainer
+from lightning.pytorch.utilities.rank_zero import rank_zero_only
 
 class LogImages(Callback):
     """
@@ -22,14 +23,17 @@ class LogImages(Callback):
         self.prepare_images = prepare_images
         self.log_inputs = log_inputs
 
+    @rank_zero_only
     def on_validation_epoch_end(self, trainer, pl_module):
         # Only save images if not in sanity check, using trainer.running_sanity_check
         if not trainer.sanity_checking :
             self._save_images(trainer, pl_module, trainer.datamodule.val_dataset, stage="val")
 
+    @rank_zero_only
     def on_test_end(self, trainer, pl_module):
         self._save_images(trainer, pl_module, trainer.datamodule.test_dataset, stage="test")
 
+    @rank_zero_only
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if self.freq_train is not None and batch_idx % self.freq_train == 0:
             self._save_images(trainer, pl_module, trainer.datamodule.train_dataset, stage=f"train_step_{batch_idx}")

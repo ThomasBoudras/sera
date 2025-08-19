@@ -115,45 +115,40 @@ class Module(LightningModule):
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         # At predict time, there are (normally) only inputs, no targets
-        input, target, meta_data = batch
-        res = self(input, meta_data)
+        inputs, targets, meta_data = batch
+        res = self(inputs, meta_data)
 
         def crop_tensor(tensor):
             crop_size = int(tensor.shape[-1]/12) 
-            tensor[...,:crop_size, :] = np.nan 
-            tensor[...,-crop_size:, :] = np.nan  
-            tensor[...,:, :crop_size] = np.nan  
-            tensor[...,:, -crop_size:] = np.nan  
+            tensor[...,:crop_size, :] = torch.nan 
+            tensor[...,-crop_size:, :] = torch.nan  
+            tensor[...,:, :crop_size] = torch.nan  
+            tensor[...,:, -crop_size:] = torch.nan  
             return tensor
         
         res = crop_tensor(res)
-        input = crop_tensor(input)
+        inputs = crop_tensor(inputs)
 
         bounds = meta_data["bounds"]
-        geometry_id = meta_data["geometry_id"]
         
         if self.predictions_save_dir is not None:
             np.save(
-                self.predictions_save_dir / "pred" / f"{batch_idx}.npy",
+                self.predictions_save_dir / "preds" / f"batch_{batch_idx}.npy",
                 res.cpu().numpy().astype(np.float32),
             )
             np.save(
-                self.predictions_save_dir / "input" / f"{batch_idx}.npy",
-                input.cpu().numpy().astype(np.float32),
+                self.predictions_save_dir / "inputs" / f"batch_{batch_idx}.npy",
+                inputs.cpu().numpy().astype(np.float32),
             )
             np.save(
-                self.predictions_save_dir / "bounds" / f"{batch_idx}.npy",
+                self.predictions_save_dir / "bounds" / f"batch_{batch_idx}.npy",
                 bounds.cpu().numpy().astype(np.float32),
             )
-            np.save(
-                self.predictions_save_dir / "geometry_id" / f"{batch_idx}.npy",
-                geometry_id.cpu().numpy().astype(np.float32),
-            )
             if self.save_target : 
-                target = crop_tensor(target)
+                targets = crop_tensor(targets)
                 np.save(
-                    self.predictions_save_dir / "target" / f"{batch_idx}.npy",
-                    target.cpu().numpy().astype(np.float32),
+                    self.predictions_save_dir / "targets" / f"batch_{batch_idx}.npy",
+                    targets.cpu().numpy().astype(np.float32),
                 )
 
         else:

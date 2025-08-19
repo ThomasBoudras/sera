@@ -15,6 +15,8 @@ class getS1S2Composites:
         self.resolution_input = resolution_input
         self.date_column = date_column
         self.resampling_method = resampling_method
+        self.mean = None
+        self.std = None
 
     def prepare_gdf_for_inputs(self, gdf) : 
         return gdf #No preparation needed for composite image

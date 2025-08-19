@@ -1,8 +1,0 @@
-# @package _global_
-
-defaults:
-  - d_edsr_utae_sl1_16img_test
-  - _self_
-  - override /datamodule/dataset/method_change : relative_difference_method
-
-run_name: rd_EDSR_UTAE_SL1_16img

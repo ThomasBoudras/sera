@@ -147,3 +147,4 @@ wandb/
 .autoenv
 .vscode/
 batch/
+outputs/

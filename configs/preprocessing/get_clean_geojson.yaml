@@ -11,3 +11,8 @@ columns_to_drop:
 
 columns_to_add:
   lidar_unit: dm
+
+hydra:
+  run :
+    dir : ${data_dir}/logs
+  output_subdir : hydra_logs

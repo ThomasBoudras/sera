@@ -9,3 +9,8 @@ rename_rules:
   "^module\\.": ""
   "_bn": ".bn"
   "conv(\\d+)": "conv\\1"
+
+hydra:
+  run :
+    dir : ${data_dir}/logs
+  output_subdir : hydra_logs

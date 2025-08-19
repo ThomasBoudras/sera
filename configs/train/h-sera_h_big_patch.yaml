@@ -1,8 +1,8 @@
 # @package _global_
 
 project: "train_sera"
-run_name: h-sera_h
-run_version: v3_${run_name}
+run_name: h-sera_h_big_patch
+run_version: v1_${run_name}
 data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
 ckpt_path: last
 
@@ -12,7 +12,12 @@ module:
         classification_path: ${data_dir}/open_canopy/
 
 datamodule:
+    instance:
+        batch_size: 4
+    
     dataset:
+        patch_size_input: 48
+        patch_size_target: 192
         get_targets:
             targets_path: ${data_dir}/open_canopy/
 

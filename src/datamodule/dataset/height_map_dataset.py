@@ -61,7 +61,7 @@ class heightMapDataset(Dataset):
             # which is a bit excessive. Instead, by convention, we use a margin of 1/12 of the patch size
             # to provide some overlap for edge effects, but not a full overlap.
 
-            gdf = expand_gdf(gdf, patch_size=self.patch_size_real, margin_size=margin_size)
+            gdf = expand_gdf(gdf, patch_size=self.patch_size_real, margin_size=margin_size, resolution=self.resolution_input)
         return gdf
 
     def custom_collate_fn(self, batch):
@@ -110,9 +110,6 @@ class heightMapDataset(Dataset):
             meta_data[key] = value
 
         meta_data["bounds"] = torch.tensor(bounds)
-
-        if self.stage == "predict" :
-            meta_data["geometry_id"] = torch.tensor(row_gdf["geometry_id"])
 
         return inputs, targets, meta_data
     

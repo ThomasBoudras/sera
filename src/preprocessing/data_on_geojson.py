@@ -42,7 +42,7 @@ def count_within_n_days(list_dates, ref_date, max_n_days) -> int:
 
 def get_data_on_geojson(gdf, min_n_days, max_n_days, list_date_field, ref_date_field, resolution) -> pd.DataFrame:
     results = {"mean_nb_date": [], "std_nb_date": [], "percentage_samples": defaultdict(list)}
-    for n_days in tqdm(range(min_n_days, max_n_days + 1, resolution), desc="Computing mean number of valid dates "):
+    for n_days in tqdm(range(min_n_days, max_n_days + 3*resolution +1, resolution), desc="Computing mean number of valid dates "):
         nb_dates = gdf.apply(
             lambda row: count_within_n_days(row[list_date_field], row[ref_date_field], n_days),
             axis=1
@@ -65,7 +65,7 @@ def plot_figures(df, min_n_days, max_n_days, confidence_level, save_dir, resolut
     """
 
     # Prepare the data for the mean number of valid dates and its standard deviation
-    nb_days = np.arange(min_n_days, max_n_days + 1, resolution)
+    nb_days = np.arange(min_n_days, max_n_days + 3*resolution + 1, resolution)
     means = np.array(df["mean_nb_date"])
     stds = np.array(df["std_nb_date"])
     min_dates_list = sorted([k for k in df["percentage_samples"].keys()])

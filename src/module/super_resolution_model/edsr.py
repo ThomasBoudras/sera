@@ -27,6 +27,7 @@ class EDSR(nn.Module):
 
         self.n_channels = n_channels
         self.pretrained_model_path = Path(pretrained_model_path).resolve() if pretrained_model_path is not None else None 
+        self.input_type = input_type
 
         # define head module
         m_head = [conv2d(n_channels, n_feats, kernel_size)]
@@ -57,11 +58,28 @@ class EDSR(nn.Module):
         load_from = torch.load(self.pretrained_model_path,  map_location=torch.device('cpu'), weights_only=True)
 
         # We only change weight of the head and tail of the model, the body does not need to be changed
-        # We repeat the weight of the head and tail of the model to match the number of channels
-        nb_repeat = int(np.ceil(self.n_channels / 3))
-        load_from["head.0.weight"] = load_from["head.0.weight"].repeat(1, nb_repeat, 1, 1)[:, :self.n_channels, :, :]
-        load_from["tail.1.weight"] = load_from["tail.1.weight"].repeat(nb_repeat, 1, 1, 1)[:self.n_channels, :, :, :]
-        load_from["tail.1.bias"] = load_from["tail.1.bias"].repeat(nb_repeat)[:self.n_channels]
+
+        # Update "head.0.weight"
+        module_tensor = load_from["head.0.weight"]
+        mean_weight = module_tensor.mean(dim=1, keepdim=True)
+        expanded_weight = mean_weight.expand(-1, self.n_channels, -1, -1).clone()
+        expanded_weight[:, :3, :, :] = module_tensor[:, [2,1,0], :, :]  # Sentinel-2 start with BGR
+        load_from["head.0.weight"] = expanded_weight
+
+        # Update "tail.1.weight"
+        module_tensor = load_from["tail.1.weight"]
+        mean_weight = module_tensor.mean(dim=0, keepdim=True)
+        expanded_weight = mean_weight.expand(self.n_channels, -1, -1, -1).clone()
+        expanded_weight[:3, :, :, :] = module_tensor[[2,1,0], :, :, :]  # Sentinel-2 start with BGR
+        load_from["tail.1.weight"] = expanded_weight
+
+        # Update "tail.1.bias"
+        module_tensor = load_from["tail.1.bias"]
+        mean_bias = module_tensor.mean().unsqueeze(0)
+        expanded_bias = mean_bias.expand(self.n_channels).clone()
+        expanded_bias[:3] = module_tensor[[2,1,0]] # Sentinel-2 start with BGR
+        load_from["tail.1.bias"] = expanded_bias
+
         self.load_state_dict(load_from, strict=False)
            
     def forward_timeseries(self, x, meta_data):

@@ -63,12 +63,12 @@ class changeMapDataset(Dataset):
             # so we recover all the subpatches in the bounds. To each 
             # sub-patch we add a margin on its edges for the edge effect.
 
-            margin_size = int(self.patch_size_real/12) 
+            margin_size = int(np.ceil(self.patch_size_real/12)) 
             # As we apply 3 margins, with a margin length of 1/6 of 
             # the patch size, we have a complete overlap of each patch. 
             # By convention, we take a margin 2 times smaller.
             
-            gdf = expand_gdf(gdf, patch_size=self.patch_size_real, margin_size=margin_size)
+            gdf = expand_gdf(gdf, patch_size=self.patch_size_real, margin_size=margin_size, resolution=self.resolution_input)
 
     def custom_collate_fn(self, batch):
         inputs = [item[0] for item in batch]  
@@ -134,8 +134,5 @@ class changeMapDataset(Dataset):
 
         meta_data["bounds"] = torch.tensor(bounds)
         
-        if self.stage == "predict" :
-            meta_data["geometry_id"] = torch.tensor(row_gdf["geometry_id"])
-
         return inputs, targets, meta_data
     

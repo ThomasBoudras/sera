@@ -6,20 +6,6 @@ def conv2d(in_channels, out_channels, kernel_size, bias=True):
         in_channels, out_channels, kernel_size,
         padding=(kernel_size//2), bias=bias)
 
-
-class BasicBlock(nn.Sequential):
-    def __init__(
-        self, conv, in_channels, out_channels, kernel_size, stride=1, bias=False,
-        bn=True, act=nn.ReLU(True)):
-
-        m = [conv(in_channels, out_channels, kernel_size, bias=bias)]
-        if bn:
-            m.append(nn.BatchNorm2d(out_channels))
-        if act is not None:
-            m.append(act)
-
-        super(BasicBlock, self).__init__(*m)
-
 class ResBlock(nn.Module):
     def __init__(
         self, conv, n_feats, kernel_size,

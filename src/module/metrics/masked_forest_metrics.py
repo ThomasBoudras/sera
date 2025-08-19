@@ -1,10 +1,10 @@
 import torch
 import numpy as np
-from src.module.metrics.masked_forest_metrics_utils import get_vegetation_and_forest_mask
 import geopandas as gpd
 from torchmetrics import Metric
 from pathlib import Path
 
+from src.module.metrics.masked_forest_metrics_utils import get_vegetation_and_forest_mask
 
 class maskedForestMetrics(Metric): 
     # Initialize the metrics
@@ -23,7 +23,9 @@ class maskedForestMetrics(Metric):
         self.classes_to_keep = classes_to_keep
         self.resolution_target = resolution_target
 
-        self.accumulated_metrics = {}
+        for name, reduce_fx in self.metrics_calculator.get_required_states().items():
+            self.add_state(name, default=torch.tensor(0.0), dist_reduce_fx=reduce_fx)
+
 
     # Update the metrics for each batch
     def update(self, pred, target, meta_data):
@@ -58,25 +60,18 @@ class maskedForestMetrics(Metric):
         mask = vegetation_mask & ~nan_mask
 
         # Update the metrics
-        self.metrics_calculator.update(
-            pred.to(target.device), 
-            target.to(target.device), 
-            mask=mask, 
-            accumulated_metrics = self.accumulated_metrics, 
+        self.metrics_calculator.batch_update(
+            pred = pred.to(target.device), 
+            target = target.to(target.device), 
+            mask = mask, 
+            states = self, 
         )
 
     # Compute the final results
     def compute(self):
-        final_results = {}
-        self.metrics_calculator.final_compute(
-            self.accumulated_metrics, 
-            final_results,
-        )
+        final_results = self.metrics_calculator.epoch_compute(states=self)
         return final_results
 
-    # Reset the accumulated metrics after an epoch
-    def reset(self):
-        self.accumulated_metrics = {}
 
 
 

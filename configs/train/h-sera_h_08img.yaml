@@ -2,7 +2,7 @@
 
 project: "train_sera"
 run_name: h-sera_h_08img
-run_version: v1_${run_name}
+run_version: v2_${run_name}
 data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
 ckpt_path: last
 

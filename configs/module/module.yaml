@@ -16,6 +16,8 @@ scheduler:
   mode: min
   factor: 0.1
   patience: 5
+  threshold: 0.05  # Minimal change to qualify as improvement
+  threshold_mode: 'abs'
 
 instance:
   _target_: src.module.module.Module

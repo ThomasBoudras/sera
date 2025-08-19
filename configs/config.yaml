@@ -16,7 +16,7 @@ defaults:
 
 
 project : "sera"
-run_name: sera_h
+run_name: h-sera_h
 run_version: v1_${run_name}
 test_after_training: True
 print_config: True

@@ -6,6 +6,7 @@ max_epochs: 100
 
 accelerator: gpu
 num_nodes: 1
+devices: -1
 strategy: auto
 precision : 32
 log_every_n_steps: 50

@@ -66,9 +66,7 @@ def train(config: DictConfig) :
         else :
             log.info(f"Start of training from checkpoint {ckpt_path} !")
     
-    elif config.get("ckpt_path") == "last" :
-        # Check if a last checkpoint exists in the current working directory
-        ckpt_path = "last"
+    elif ckpt_path == "last" :
         log.info(f"Starting training from last checkpoint {ckpt_path} !")
     
     else :

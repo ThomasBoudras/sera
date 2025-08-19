@@ -17,8 +17,11 @@ def main(cfg: DictConfig) -> None:
     grouping_dates = initial_gdf["grouping_dates"].drop_duplicates().tolist()
     
     #create vrts for the dataframe
-    for date in tqdm(grouping_dates, desc="Create VRT for each date", total=len(grouping_dates)):
-        create_vrts(data_dir, date)
+    # Parallelize the creation of VRTs for each date
+    Parallel(n_jobs=cfg.n_jobs_parrallelized)(
+        delayed(create_vrts)(data_dir, date)
+        for date in tqdm(grouping_dates, desc="Create VRT for each date", total=len(grouping_dates))
+    )
     
     logging.info("Starting to compute 'vrt_list_timeseries' with parallel processing.")
     tqdm_desc = "Find correct VRT for each geometries"

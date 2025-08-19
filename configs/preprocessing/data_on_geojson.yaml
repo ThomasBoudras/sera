@@ -6,3 +6,8 @@ ref_date_field: lidar_acquisition_date
 confidence_level: 0.95
 resolution: 10
 geojson_path: /home/tboudras/code/data/utils/gdf_height_map_timeseries.geojson
+
+hydra:
+  run :
+    dir : ${data_dir}/logs
+  output_subdir : hydra_logs

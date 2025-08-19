@@ -1,0 +1,13 @@
+data_dir: /home/tboudras/code/data/
+
+reference_geojson_path: ${data_dir}/utils/gdf_height_map_composites.geojson
+unwanted_geojson_paths:
+  - ${data_dir}/utils/gdf_height_map_timeseries_unsaved.geojson
+  - ${data_dir}/utils/gdf_height_map_composites_unsaved.geojson
+output_geojson_path: ${data_dir}/utils/gdf_height_map_composites_predict.geojson
+
+
+hydra:
+  run :
+    dir : ${data_dir}/logs
+  output_subdir : hydra_logs

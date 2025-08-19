@@ -36,6 +36,8 @@ class getS1S2Timeseries :
         self.vrts_column = vrts_column
         self.date_column = date_column
         self.resampling_method = resampling_method
+        self.mean = None
+        self.std = None
 
 
     def get_date(self, str_date) :
@@ -116,7 +118,6 @@ class getS1S2Timeseries :
                 bounds=bounds,
                 resolution=self.resolution_input,
                 resampling_method = self.resampling_method,
-                
             )
             s1_asc_image, _ = get_window(
                 image_path=s1_asc_vrt,
@@ -146,7 +147,11 @@ class getS1S2Timeseries :
             date_added = inputs_dates[idx]
 
             if self.duplication_level_noise is not None: 
-                noise = np.random.normal(0, self.duplication_level_noise, image_added.shape).astype(np.float32)
+                noise = np.random.normal(
+                    0,
+                    self.duplication_level_noise * self.std,
+                    size=image_added.shape
+                ).astype(np.float32)
                 image_added = image_added + noise 
 
             inputs.insert(idx + 1, image_added)

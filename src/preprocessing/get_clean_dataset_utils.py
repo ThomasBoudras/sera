@@ -110,15 +110,19 @@ def get_valid_vrts_timeseries(data_dir, geometry, grouping_date):
         s1_dsc_vrts = [file for file in s1_dsc_vrts_path.iterdir() if file.suffix == '.vrt']
         s2_vrts = [file for file in s2_vrts_path.iterdir() if file.suffix == '.vrt']
 
-        for s2_vrt in s2_vrts :
-            if _verify_window(s2_vrt, bounds) : # type: ignore   
-                sorted_s1_asc_vrts = _sort_by_proximity(s2_vrt, s1_asc_vrts) #We are looking for the nearest tensor s1 in terms of date 
+        for s2_vrt in s2_vrts:
+            if _verify_window(s2_vrt, bounds): 
+                sorted_s1_asc_vrts = _sort_by_proximity(s2_vrt, s1_asc_vrts)  # We are looking for the nearest tensor s1 in terms of date
                 sorted_s1_dsc_vrts = _sort_by_proximity(s2_vrt, s1_dsc_vrts)
-                for s1_asc_vrt in sorted_s1_asc_vrts :
-                    if  _verify_window(s1_asc_vrt, bounds) :
+
+                for s1_asc_vrt in sorted_s1_asc_vrts:
+                    if _verify_window(s1_asc_vrt, bounds):
                         for s1_dsc_vrt in sorted_s1_dsc_vrts:
                             if _verify_window(s1_dsc_vrt, bounds):
                                 valid_vrts.append([s2_vrt.stem, s1_asc_vrt.stem, s1_dsc_vrt.stem])
+                                # Remove the selected s1_asc and s1_dsc from the original lists to avoid re-selection
+                                s1_asc_vrts.remove(s1_asc_vrt)
+                                s1_dsc_vrts.remove(s1_dsc_vrt)
                                 break
                         break
         

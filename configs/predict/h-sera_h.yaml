@@ -1,22 +1,50 @@
 # @package _global_
 
+defaults:
+  - override /train: h-sera_h
+  - _self_
+
+project : "pred_sera"
+run_version: debug_test_lidarhd
+
+ckpt_path : /lustre/fsn1/projects/rech/ego/uof45xi/data/logs/train_sera/h-sera_h/v3_h-sera_h/best_checkpoints/epoch_037.ckpt
+load_just_weights: True
+
+save_dir: ${log_dir}/predictions
+merge_method_inputs: nanmedian
+merge_method_outputs: nanmean
+
+via_bounds : null
+via_geojson :
+  path : ${data_dir}/sentinel/timeseries/lidarhd/gdf_height_map_timeseries_predict.geojson
+  split: test
+
+module:
+  instance:
+    save_target: True
+
+datamodule:
+  dataset:
+    train_dataset: null
+    val_dataset: null
+    test_dataset: null
+    predict_dataset: 
+      _target_: src.datamodule.dataset.height_map_dataset.heightMapDataset
+      resolution_input: ${datamodule.dataset.resolution_input}  
+      resolution_target: ${datamodule.dataset.resolution_target}
+      patch_size_input: ${datamodule.dataset.patch_size_input}
+      patch_size_target: ${datamodule.dataset.patch_size_target}
+      gdf_path: ${datamodule.dataset.gdf_path}
+      data_augmentation : False
+      get_inputs :  ${datamodule.dataset.get_inputs}
+      get_targets : ${datamodule.dataset.get_targets}
+      stage: predict
 
 
-train_dataset: null
-
-val_dataset: null
-
-test_dataset: null
-
-predict_dataset : 
-  _target_: src.datamodule.dataset.height_map_dataset.heightMapDataset
-  resolution_input: ${datamodule.dataset.resolution_input} 
-  resolution_target: ${datamodule.dataset.resolution_target}
-  patch_size_input: ${datamodule.dataset.patch_size_input}
-  patch_size_target: ${datamodule.dataset.patch_size_target}
-  gdf_path: ${datamodule.dataset.gdf_path}
-  data_augmentation : False
-  get_inputs :  ${datamodule.dataset.get_inputs}
-  get_targets:
-    _target_: src.datamodule.dataset.get_targets.nan.getNan
-  stage: predict
+model:
+  instance:
+    train_metrics: null
+    val_metrics: null 
+    test_metrics: null
+    predictions_save_dir : ${save_dir}
+    
