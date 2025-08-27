@@ -30,4 +30,3 @@ instance:
   optimizer: ${module.optimizer}
   scheduler: ${module.scheduler}
   predictions_save_dir : ${log_dir}/predictions
-  save_target: false

@@ -48,7 +48,6 @@ class heightMapDataset(Dataset):
             gdf = gdf[gdf['split'] == self.stage ].reset_index(drop=True)   
 
         gdf = self.get_inputs.prepare_gdf_for_inputs(gdf)
-        log.info(f"Number of {self.stage} samples after filtering : {len(gdf)}")
 
         if self.stage == "predict" :
             # In prediction mode, we want to generate predictions over the entire geometry,
@@ -62,6 +61,8 @@ class heightMapDataset(Dataset):
             # to provide some overlap for edge effects, but not a full overlap.
 
             gdf = expand_gdf(gdf, patch_size=self.patch_size_real, margin_size=margin_size, resolution=self.resolution_input)
+        
+        log.info(f"Number of {self.stage} samples : {len(gdf)}")
         return gdf
 
     def custom_collate_fn(self, batch):

@@ -71,34 +71,34 @@ get_metrics_local :
   metrics_set :
     mae_diff :
       _target_ : src.results.get_metrics_local_utils.mae_local_computer
-      name_image_1: difference_pred
-      name_image_2: difference_target
+      name_pred: difference_pred
+      name_target: difference_target
     mae_lower_diff:
       _target_ : src.results.get_metrics_local_utils.mae_lower_than_local_computer
-      name_image_1: difference_pred
-      name_image_2: difference_target
+      name_pred: difference_pred
+      name_target: difference_target
       threshold : -1
     rmse_diff :
       _target_ : src.results.get_metrics_local_utils.rmse_local_computer
-      name_image_1: difference_pred
-      name_image_2: difference_target
+      name_pred: difference_pred
+      name_target: difference_target
     bias_diff :
       _target_ : src.results.get_metrics_local_utils.bias_local_computer
-      name_image_1: difference_pred
-      name_image_2: difference_target
+      name_pred: difference_pred
+      name_target: difference_target
 
     recall_change :
       _target_ : src.results.get_metrics_local_utils.recall_local_computer
-      name_image_1: ctd_pred
-      name_image_2: ctd_target
+      name_pred: ctd_pred
+      name_target: ctd_target
     precision_change :
       _target_ : src.results.get_metrics_local_utils.precision_local_computer
-      name_image_1: ctd_pred
-      name_image_2: ctd_target
+      name_pred: ctd_pred
+      name_target: ctd_target
     f1_score_change :
       _target_ : src.results.get_metrics_local_utils.f1_score_local_computer
-      name_image_1: ctd_pred
-      name_image_2: ctd_target
+      name_pred: ctd_pred
+      name_target: ctd_target
 
     true_positive_change :
       _target_ : src.results.get_metrics_local_utils.true_positive_local_computer
@@ -106,12 +106,12 @@ get_metrics_local :
       name_image_2: ctd_target
     false_positive_change :
       _target_ : src.results.get_metrics_local_utils.false_positive_local_computer
-      name_image_1: ctd_pred
-      name_image_2: ctd_target
+      name_pred: ctd_pred
+      name_target: ctd_target
     false_negative_change :
       _target_ : src.results.get_metrics_local_utils.false_negative_local_computer
-      name_image_1: ctd_pred
-      name_image_2: ctd_target
+      name_pred: ctd_pred
+      name_target: ctd_target
 
 get_metrics_global:
   _target_ : src.results.get_metrics_global_utils.get_metrics_global

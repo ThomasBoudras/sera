@@ -23,6 +23,7 @@ datamodule:
     instance:
         normalization_save_path: ${data_dir}/normalization/spot
     dataset:
+        predict_dataset: null   
         gdf_path: ${data_dir}/utils/gdf_height_map_initial.geojson
         resolution_input: 1.5
         resolution_target: 1.5

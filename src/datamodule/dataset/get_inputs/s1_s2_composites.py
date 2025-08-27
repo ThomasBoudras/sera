@@ -10,11 +10,13 @@ class getS1S2Composites:
         resolution_input, 
         date_column,
         resampling_method,
+        open_even_oob,
     ):
         self.inputs_path = Path(inputs_path).resolve()
         self.resolution_input = resolution_input
         self.date_column = date_column
         self.resampling_method = resampling_method
+        self.open_even_oob = open_even_oob
         self.mean = None
         self.std = None
 
@@ -40,18 +42,21 @@ class getS1S2Composites:
             bounds=bounds,
             resolution=self.resolution_input,
             resampling_method = self.resampling_method,
+            open_even_oob = self.open_even_oob,
         )
         s1_asc_image, _ = get_window(
             image_path=s1_asc_vrt,
             bounds=bounds,
             resolution=self.resolution_input,
             resampling_method = self.resampling_method,
+            open_even_oob = self.open_even_oob,
         )
         s1_dsc_image, _ = get_window(
             image_path=s1_dsc_vrt,
             bounds=bounds,
             resolution=self.resolution_input,
             resampling_method = self.resampling_method,
+            open_even_oob = self.open_even_oob,
         )
 
         inputs = np.concatenate((s2_image, s1_asc_image, s1_dsc_image), axis=0)

@@ -17,7 +17,6 @@ class Module(LightningModule):
         scheduler,
         optimizer,
         predictions_save_dir,
-        save_target,
     ):
         super().__init__()
 
@@ -32,7 +31,6 @@ class Module(LightningModule):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.predictions_save_dir = Path(predictions_save_dir).resolve()
-        self.save_target = save_target
     
     def configure_optimizers(self):
         optimizer = self.optimizer(params=self.parameters())
@@ -115,41 +113,27 @@ class Module(LightningModule):
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         # At predict time, there are (normally) only inputs, no targets
-        inputs, targets, meta_data = batch
-        res = self(inputs, meta_data)
+        inputs, _, meta_data = batch
+        preds = self(inputs, meta_data)
 
-        def crop_tensor(tensor):
-            crop_size = int(tensor.shape[-1]/12) 
-            tensor[...,:crop_size, :] = torch.nan 
-            tensor[...,-crop_size:, :] = torch.nan  
-            tensor[...,:, :crop_size] = torch.nan  
-            tensor[...,:, -crop_size:] = torch.nan  
-            return tensor
+        crop_size = int(preds.shape[-1]/12) 
+        preds[...,:crop_size, :] = torch.nan 
+        preds[...,-crop_size:, :] = torch.nan  
+        preds[...,:, :crop_size] = torch.nan  
+        preds[...,:, -crop_size:] = torch.nan  
         
-        res = crop_tensor(res)
-        inputs = crop_tensor(inputs)
-
         bounds = meta_data["bounds"]
         
         if self.predictions_save_dir is not None:
+            (self.predictions_save_dir / f"rank_{self.global_rank}" / "preds").mkdir(parents=True, exist_ok=True)
+            (self.predictions_save_dir / f"rank_{self.global_rank}" / "bounds").mkdir(parents=True, exist_ok=True)
             np.save(
-                self.predictions_save_dir / "preds" / f"batch_{batch_idx}.npy",
-                res.cpu().numpy().astype(np.float32),
+                self.predictions_save_dir / f"rank_{self.global_rank}" / "preds" / f"batch_{batch_idx}.npy",
+                preds.cpu().numpy().astype(np.float32),
             )
             np.save(
-                self.predictions_save_dir / "inputs" / f"batch_{batch_idx}.npy",
-                inputs.cpu().numpy().astype(np.float32),
-            )
-            np.save(
-                self.predictions_save_dir / "bounds" / f"batch_{batch_idx}.npy",
+                self.predictions_save_dir / f"rank_{self.global_rank}" / "bounds" / f"batch_{batch_idx}.npy",
                 bounds.cpu().numpy().astype(np.float32),
             )
-            if self.save_target : 
-                targets = crop_tensor(targets)
-                np.save(
-                    self.predictions_save_dir / "targets" / f"batch_{batch_idx}.npy",
-                    targets.cpu().numpy().astype(np.float32),
-                )
-
         else:
             raise Exception("Please give a name for the prediction dir ")

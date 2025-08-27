@@ -22,6 +22,7 @@ class getS1S2Timeseries :
         vrts_column,
         date_column,
         resampling_method,
+        open_even_oob,
     ):
         """
         nb_timeseries_image : Number of tuple (S2, S1 asc, S1 dsc)
@@ -36,6 +37,7 @@ class getS1S2Timeseries :
         self.vrts_column = vrts_column
         self.date_column = date_column
         self.resampling_method = resampling_method
+        self.open_even_oob = open_even_oob
         self.mean = None
         self.std = None
 
@@ -118,19 +120,26 @@ class getS1S2Timeseries :
                 bounds=bounds,
                 resolution=self.resolution_input,
                 resampling_method = self.resampling_method,
+                open_even_oob = self.open_even_oob,
             )
             s1_asc_image, _ = get_window(
                 image_path=s1_asc_vrt,
                 bounds=bounds,
                 resolution=self.resolution_input,
                 resampling_method = self.resampling_method,
+                open_even_oob = self.open_even_oob,
             )
             s1_dsc_image, _ = get_window(
                 image_path=s1_dsc_vrt,
                 bounds=bounds,
                 resolution=self.resolution_input,
                 resampling_method = self.resampling_method,
+                open_even_oob = self.open_even_oob,
             )
+            if s1_asc_image is None or s1_dsc_image is None or s2_image is None:
+                raise ValueError(f"bounds: {bounds}, s1_asc_image: {s1_asc_image}, s2_image: {s2_image}, s1_dsc_image: {s1_dsc_image}, file_lidar_date: {file_lidar_date}, s2_s1_vrt: {s2_s1_vrt}")
+            if len(s1_asc_image.shape) != len(s2_image.shape) or len(s1_dsc_image.shape) != len(s2_image.shape):
+                raise ValueError(f"bounds: {bounds}, s1_asc_image.shape: {s1_asc_image.shape}, s2_image.shape: {s2_image.shape}, s1_dsc_image.shape: {s1_dsc_image.shape}, file_lidar_date: {file_lidar_date}, s2_s1_vrt: {s2_s1_vrt}")
 
             images = np.concatenate((s2_image, s1_asc_image, s1_dsc_image), axis=0)
             images = images.astype(np.float32).transpose(1, 2, 0)

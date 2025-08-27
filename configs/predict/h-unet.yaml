@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - override /train: h-sera_h
+  - override /train: h-unet
   - _self_
 
 project : "pred_sera"
@@ -15,7 +15,7 @@ merge_method: mean
 
 via_bounds : null
 via_geojson :
-  path : ${data_dir}/sentinel/timeseries/lidarhd/gdf_height_map_timeseries_predict.geojson
+  path : ${data_dir}/sentinel/composites/lidarhd/gdf_height_map_composites_predict.geojson
   split: test
 
 datamodule:
@@ -33,4 +33,5 @@ model:
     train_metrics: null
     val_metrics: null 
     test_metrics: null
-    predictions_save_dir : ${save_dir}    
+    predictions_save_dir : ${save_dir}
+    

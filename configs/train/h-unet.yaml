@@ -21,6 +21,7 @@ module:
 
 datamodule:
     dataset:
+        predict_dataset: null
         gdf_path: ${data_dir}/sentinel/composites/lidarhd/gdf_height_map_composites.geojson
         resolution_input: 2.5
         patch_size_input: 128

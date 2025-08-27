@@ -5,20 +5,21 @@ from rasterio import features
 from scipy.ndimage import binary_dilation, binary_erosion
 from src.global_utils  import get_window
 from shapely.geometry import shape
-
+from shapely.geometry import box
+from rasterio.features import rasterize
 
 class get_images:
     def __init__(self, image_loaded_set, image_computed_set) :
         self.image_loaded_set = image_loaded_set
         self.image_computed_set = image_computed_set
 
-    def __call__(self, bounds):
+    def __call__(self, bounds, date):
         res_images = {}
         res_profiles = {}
 
         #Retrieving images to be loaded 
         for name_image, image_loader in self.image_loaded_set.items() :
-            image, profile = image_loader.load_image(bounds)
+            image, profile = image_loader.load_image(bounds, date)
             res_images[name_image] = image 
             res_profiles[name_image] = profile
 
@@ -30,43 +31,150 @@ class get_images:
         return res_images
 
 
-class image_loader_model :
-    def __init__(self, path, resolution=None, resampling_method=None, scaling_factor=1, min_image=None, max_image=None, classification_mask_path = None, classes_to_keep = None, open_even_oob=False):
+class input_image_loader :
+    def __init__(self, path, resolution, resampling_method, open_even_oob, channel_to_keep):
+        self.path = path
+        self.resolution = resolution
+        self.resampling_method = resampling_method
+        self.open_even_oob = open_even_oob
+        self.channel_to_keep = channel_to_keep
+
+    def load_image(self, bounds, date):
+        if "<date>" in self.path :
+            date = date[:6] + "15"
+            path = self.path.replace("<date>", date)
+        elif "<year>" in self.path :
+            path = self.path.replace("<year>", date[:4])
+        else:
+            path = self.path
+
+        image, profile = get_window(
+            path,
+            bounds=bounds,
+            resolution=self.resolution,
+            resampling_method=self.resampling_method,
+            open_even_oob=self.open_even_oob
+            )
+        if self.channel_to_keep is not None:
+            image = image[self.channel_to_keep, ...]
+        image = image.astype(np.float32)
+        # Normalisation min-max
+        image[~np.isfinite(image)] = 0
+        image_min = np.nanmin(image)
+        image_max = np.nanmax(image)
+        image = (image - image_min) / (image_max - image_min)
+
+        return image, profile
+
+
+class target_image_loader :
+    def __init__(self, path, resolution, resampling_method, scaling_factor, min_image, max_image, open_even_oob):
         self.path = path
         self.resolution = resolution
         self.resampling_method = resampling_method
         self.scaling_factor = scaling_factor
         self.min_image = min_image
         self.max_image = max_image
-        self.classification_mask_path = classification_mask_path
-        self.classes_to_keep = classes_to_keep
         self.open_even_oob = open_even_oob
 
-    def load_image(self, bounds):
+    def load_image(self, bounds, date):
+        year = date[:4]
+        path = self.path.replace("<year>", year)
         image, profile = get_window(
-            self.path,
+            path,
             bounds=bounds,
             resolution=self.resolution,
             resampling_method=self.resampling_method,
             open_even_oob=self.open_even_oob
             )
-        
-        if self.classification_mask_path:
-                mask, _= get_window(
-                    self.classification_mask_path,
-                    geometry=None,
-                    bounds=bounds,
-                    resolution=self.resolution,
-                    resampling_method=self.resampling_method,
-                ).squeeze()
-                for ix in np.unique(mask):
-                    if ix not in self.classes_to_keep:
-                        image[mask == ix] = np.nan
-
         image = image.astype(np.float32)*self.scaling_factor
         image = np.clip(image, self.min_image, self.max_image).squeeze()
 
         return image, profile
+
+class prediction_image_loader :
+    def __init__(self, path, resolution, resampling_method, scaling_factor, min_image, max_image, open_even_oob):
+        self.path = path
+        self.resolution = resolution
+        self.resampling_method = resampling_method
+        self.scaling_factor = scaling_factor
+        self.min_image = min_image
+        self.max_image = max_image
+        self.open_even_oob = open_even_oob
+
+    def load_image(self, bounds, date):
+        image, profile = get_window(
+            image_path=self.path,
+            bounds=bounds,
+            resolution=self.resolution,
+            resampling_method=self.resampling_method,
+            open_even_oob=self.open_even_oob
+            )
+        image = image.astype(np.float32)*self.scaling_factor
+        image = np.clip(image, self.min_image, self.max_image).squeeze()
+
+        return image, profile
+
+
+class mask_image_loader :
+    def __init__(self, classification_mask_path, forest_mask_path, resolution, classes_to_keep):
+        self.classification_mask_path = classification_mask_path
+        self.forest_mask_gdf = gpd.read_parquet(forest_mask_path) if forest_mask_path is not None else None
+        self.resolution = resolution
+        self.classes_to_keep = classes_to_keep
+        
+    def load_image(self, bounds, date):
+        year = date[:4]
+        raster_bounds = box(*bounds)
+        mask_path = self.classification_mask_path.replace("<year>", year)
+        classification, profile = get_window(
+            mask_path,
+            bounds=bounds,
+            resolution=self.resolution,
+            resampling_method="nearest",
+        )
+        classification = classification.squeeze()
+
+        classif_mask = classification == self.classes_to_keep[0]
+        if len(self.classes_to_keep) > 1:
+            for aclass in self.classes_to_keep[1::]:
+                classif_mask = classif_mask | (classification == aclass)
+    
+        if self.forest_mask_gdf is not None:
+            clipped_gdf = gpd.clip(self.forest_mask_gdf, raster_bounds)     
+            geometries = [(geom, 1) for geom in clipped_gdf.geometry]
+            if len(geometries):
+                mask_forest = rasterize(
+                    geometries,
+                    out_shape=classification.shape,
+                    transform=profile["transform"],
+                    fill=0,
+                    default_value=1,
+                    dtype=np.uint8,
+                ).astype(bool)
+            else:
+                mask_forest = np.zeros_like(classif_mask, dtype=bool)
+        else :
+            mask_forest = np.zeros_like(classif_mask, dtype=bool)
+        
+        final_mask = classif_mask | mask_forest
+        return final_mask, None
+
+
+class masked_image_computer :
+    def __init__(self, input_name, mask_name):
+        self.input_name = input_name
+        self.mask_name = mask_name
+
+    def compute_image(self, res_images, res_profiles):
+        if self.input_name not in res_images:
+            Exception(f"You must first load {self.input_name}")
+            
+        image = res_images[self.input_name].copy()
+        mask = res_images[self.mask_name].copy()
+
+        image[~mask] = np.nan
+        return image
 
 
 class difference_computer :
@@ -76,13 +184,12 @@ class difference_computer :
         self.min_image = min_image
         self.max_image = max_image
 
-
     def compute_image(self, res_images, res_profiles):
         if self.input_name_1 not in res_images or  self.input_name_2 not in res_images :
             Exception(f"You must first load {self.input_name_1} and {self.input_name_2}")
             
-        image_1 = res_images[self.input_name_1]
-        image_2 = res_images[self.input_name_2]
+        image_1 = res_images[self.input_name_1].copy()
+        image_2 = res_images[self.input_name_2].copy()
         difference = image_2 - image_1
         difference = np.clip(difference, self.min_image, self.max_image).astype(np.float32)
         return difference
@@ -99,14 +206,15 @@ class change_threshold_computer :
         if self.input_name not in res_images  :
             Exception(f"You must first load {self.input_name}")
             
-        difference = res_images[self.input_name]
+        difference = res_images[self.input_name].copy()
         profile = res_profiles[self.profile_name]
 
         nan_mask = np.isnan(difference)
         changes = difference < self.threshold
 
         return apply_min_area(changes=changes, profile=profile, min_area=self.min_area, nan_mask=nan_mask)
-    
+  
+   
 class change_percentage_computer :
     def __init__(self, name_image_1, name_image_2, threshold, min_area, profile_name = None):
         self.name_image_1 = name_image_1
@@ -119,8 +227,8 @@ class change_percentage_computer :
         if (self.name_image_1 not in res_images) or  (self.name_image_2 not in res_images):
             Exception(f"You must first load {self.name_image_1} and {self.name_image_2}")
 
-        image_1 = res_images[self.name_image_1]
-        image_2 = res_images[self.name_image_2]
+        image_1 = res_images[self.name_image_1].copy()
+        image_2 = res_images[self.name_image_2].copy()
         profile = res_profiles[self.profile_name]
         nan_mask = np.isnan(image_1) | np.isnan(image_2)
         changes =  (image_2 - image_1) / (image_1 + 1e-6) < self.threshold
@@ -142,8 +250,8 @@ class change_treecover_computer :
         if (self.name_image_1 not in res_images) or  (self.name_image_2 not in res_images):
             Exception(f"You must first load {self.name_image_1} and {self.name_image_2}")
 
-        image_1 = res_images[self.name_image_1]
-        image_2 = res_images[self.name_image_2]
+        image_1 = res_images[self.name_image_1].copy()
+        image_2 = res_images[self.name_image_2].copy()
         profile = res_profiles[self.profile_name]
 
         nan_mask = np.isnan(image_1) | np.isnan(image_2)

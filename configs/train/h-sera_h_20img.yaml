@@ -13,6 +13,7 @@ module:
 
 datamodule:
     dataset:
+        predict_dataset: null
         get_inputs:
             nb_timeseries_image: 20
         get_targets:

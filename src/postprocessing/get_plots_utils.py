@@ -15,7 +15,7 @@ class get_plots :
 
     def __call__(self, images, metrics, idx_plot):
         for plot_name, plot in self.plot_set.items():
-            fig = plt.figure(figsize=(plot.size_plot, plot.size_plot))
+            fig = plt.figure(figsize=(plot.size_plot_width, plot.size_plot_height))
             plot.create_plot(images, metrics)
             fig.savefig(
                 self.save_dir / f"{plot_name}_{idx_plot}_plot.jpg", bbox_inches="tight", pad_inches=0
@@ -23,11 +23,12 @@ class get_plots :
             plt.close()
 
 class plot_model :
-    def __init__(self, graph_list, nb_row, nb_col, size_plot = 10):
+    def __init__(self, graph_list, nb_row, nb_col, size_plot_width, size_plot_height):
         self.graph_list = graph_list
         self.nb_row = nb_row
         self.nb_col = nb_col
-        self.size_plot = size_plot
+        self.size_plot_width = size_plot_width
+        self.size_plot_height = size_plot_height
     
     def create_plot(self, images, metrics):
         for graph in self.graph_list :
@@ -51,33 +52,35 @@ class graph_model :
 
 
 class method_imshow :
-    def __init__(self, image_name, cmap=None, norm=None, channels_to_keep= None, patch_size_percentage=None):
+    def __init__(self, image_name, real_patch_size, resolution, cmap=None, norm=None):
         self.image_name = image_name
+        self.real_patch_size = real_patch_size
+        self.resolution = resolution
+        if self.real_patch_size is not None and self.resolution is not None :
+            self.patch_size = self.real_patch_size / self.resolution 
+        else :
+            self.patch_size = None
         self.cmap = cmap
         self.norm = norm
-        self.channels_to_keep = channels_to_keep
-        self.patch_size_percentage = patch_size_percentage 
 
     def __call__(self, images, metrics, ax):
         if self.image_name not in images :
             Exception(f"You must first load {self.image_name}")
         image = images[self.image_name]
         
-        if self.patch_size_percentage :
+        if self.real_patch_size is not None :
+            # We crop the image to the patch size percentage
             height, width = image.shape[-2], image.shape[-1]
-            x_start = int(height*(1-self.patch_size_percentage)/2)
-            x_stop = int(x_start + height*self.patch_size_percentage)
-            y_start = int(width*(1-self.patch_size_percentage)/2)
-            y_stop = int(x_start + width*self.patch_size_percentage)
+            x_start = int(height/2 - self.patch_size/2) # we center the crop
+            x_stop = int(x_start + self.patch_size)
+            y_start = int(width/2 - self.patch_size/2) # we center the crop
+            y_stop = int(y_start + self.patch_size)
 
             if len(image.shape) > 2 :
                 image = image[..., x_start:x_stop, y_start:y_stop ]
             else :
                 image = image[x_start:x_stop, y_start:y_stop ]
             
-        if self.channels_to_keep is not None :
-            image = np.take(image, indices=self.channels_to_keep, axis=0)
-        
         if len(image.shape) == 3 :
             image = np.transpose(image, (1, 2, 0))
             image = (image - image.min()) / (image.max() - image.min())
@@ -102,3 +105,37 @@ class method_bar :
         ax.set_ylim(self.y_min, self.y_max)
         ax.grid(color="gray", linestyle="dashed", axis="y")
         plt.xticks(rotation=40)
+
+
+class method_table :
+    def __init__(self, metrics_list, font_size, table_width_scale, table_height_scale):
+        self.metrics_list = metrics_list
+        self.font_size = font_size
+        self.table_width_scale = 0.7
+        self.table_height_scale = 1.8
+
+    def __call__(self, images, metrics, ax) :
+        for key in self.metrics_list :
+            if key not in metrics :
+                Exception(f"You must first compute metric {key}")
+        
+        # Create table data with metric names and values
+        table_data = []
+        for metric_name in self.metrics_list:
+            value = metrics[metric_name]
+            # Format the value to 3 decimal places if it's a float
+            if isinstance(value, float):
+                formatted_value = f"{value:.3f}"
+            else:
+                formatted_value = str(value)
+            table_data.append([metric_name, formatted_value])
+        
+        # Create the table
+        table = ax.table(cellText=table_data,
+                        colLabels=['Metric', 'Value'],
+                        cellLoc='center',
+                        loc='center')
+        table.set_fontsize(self.font_size)
+        table.scale(self.table_width_scale, self.table_height_scale)
+        
+        ax.axis('off')

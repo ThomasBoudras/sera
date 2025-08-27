@@ -1,4 +1,4 @@
-model : h-sera_h
+model : h-open-canopy
 min_height : 0
 max_height : 40
 resolution : 2.5
@@ -12,7 +12,9 @@ output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
 grouping_dates : lidar_acquisition_date
 version_metrics : test_lidarhd
 
-geometries_path : ${data_dir}/logs/pred_sera/${model}/test_lidarhd/predictions/predict_gdf.geojson
+#geometries_path : ${data_dir}/logs/pred_sera/${model}/test_lidarhd/predictions/predict_gdf.geojson
+geometries_path : ${data_dir}/logs/pred_sera/h-sera_h/test_lidarhd/predictions/predict_gdf.geojson
+
 hydra:
   run:
     dir: ${save_dir}
@@ -38,11 +40,13 @@ get_images :
       channel_to_keep: [0,1,2]
     
     height_pred : 
-      _target_: src.postprocessing.get_images_utils.prediction_image_loader
-      path: ${data_dir}/logs/pred_sera/${model}/${version_metrics}/predictions/data/${model}_full.vrt
+      _target_: src.postprocessing.get_images_utils.target_image_loader
+      path : /lustre/fsstor/projects/rech/ego/commun/fajwel/height_maps/open_canopy_france/<year>/full.vrt
+      #_target_: src.postprocessing.get_images_utils.prediction_image_loader
+      #path: ${data_dir}/logs/pred_sera/${model}/${name_aoi}/predictions/data/preds/${model}_preds_full.vrt
       resolution: ${resolution}
       resampling_method: max
-      scaling_factor: 1
+      scaling_factor: 0.1
       min_image: ${min_height}
       max_image: ${max_height}
       open_even_oob: False

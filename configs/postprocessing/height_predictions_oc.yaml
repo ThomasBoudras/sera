@@ -1,8 +1,10 @@
-model : h-sera_h
+# @package _global_
+model : h-open-canopy
 min_height : 0
 max_height : 40
 resolution : 2.5
 real_patch_size_plot : 500
+image_type : timeseries
 seed : 12345
 date_column : lidar_acquisition_date
 
@@ -12,7 +14,9 @@ output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
 grouping_dates : lidar_acquisition_date
 version_metrics : test_lidarhd
 
-geometries_path : ${data_dir}/logs/pred_sera/${model}/test_lidarhd/predictions/predict_gdf.geojson
+#geometries_path : ${data_dir}/logs/pred_sera/${model}/test_lidarhd/predictions/predict_gdf.geojson
+geometries_path : ${data_dir}/logs/pred_sera/h-sera_h/test_lidarhd/predictions/predict_gdf.geojson
+
 hydra:
   run:
     dir: ${save_dir}
@@ -26,7 +30,7 @@ get_images :
       path: ${data_dir}/sentinel/composites/lidarhd/lidar_date_<date>/s2/s2.vrt
       resolution: null
       resampling_method: bilinear
-      open_even_oob: True
+      open_even_oob: False
       channel_to_keep: [2,1,0]
       
     spot_rgb :
@@ -34,15 +38,17 @@ get_images :
       path: ${data_dir}/open_canopy/<year>/spot.vrt
       resolution: null
       resampling_method: bilinear
-      open_even_oob: True
+      open_even_oob: False
       channel_to_keep: [0,1,2]
     
     height_pred : 
-      _target_: src.postprocessing.get_images_utils.prediction_image_loader
-      path: ${data_dir}/logs/pred_sera/${model}/${version_metrics}/predictions/data/${model}_full.vrt
+      _target_: src.postprocessing.get_images_utils.target_image_loader
+      path : /lustre/fsstor/projects/rech/ego/commun/fajwel/height_maps/open_canopy_france/<year>/full.vrt
+      #_target_: src.postprocessing.get_images_utils.prediction_image_loader
+      #path: ${data_dir}/logs/pred_sera/${model}/${name_aoi}/predictions/data/preds/${model}_preds_full.vrt
       resolution: ${resolution}
       resampling_method: max
-      scaling_factor: 1
+      scaling_factor: 0.1
       min_image: ${min_height}
       max_image: ${max_height}
       open_even_oob: False
@@ -162,8 +168,7 @@ get_plots:
       _target_ : src.postprocessing.get_plots_utils.plot_model
       nb_row: 4
       nb_col : 2
-      size_plot_width: 15
-      size_plot_height: 30
+      size_plot: 10
       graph_list : 
         - _target_: src.postprocessing.get_plots_utils.graph_model
           idx_row: 0
@@ -246,6 +251,3 @@ get_plots:
           method_graph: 
             _target_: src.postprocessing.get_plots_utils.method_table
             metrics_list : [mae_local, rmse_local, me_local, nmae_local, treecover_local]
-            font_size : 14
-            table_width_scale : 0.7
-            table_height_scale : 1.8

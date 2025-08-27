@@ -10,12 +10,14 @@ class getSpotComposites:
         resolution_input, 
         date_column,
         resampling_method,
+        open_even_oob,
     ):
         
         self.inputs_path = Path(inputs_path).resolve()
         self.resolution_input = resolution_input
         self.date_column = date_column
         self.resampling_method = resampling_method
+        self.open_even_oob = open_even_oob
         self.mean = None
         self.std = None
 
@@ -35,7 +37,8 @@ class getSpotComposites:
             image_path=spot_vrt,
             bounds=bounds,
             resolution=self.resolution_input,
-            resampling_method = self.resampling_method
+            resampling_method = self.resampling_method,
+            open_even_oob = self.open_even_oob,
             )
         
         inputs = inputs.astype(np.float32).transpose(1, 2, 0)

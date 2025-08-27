@@ -19,6 +19,7 @@ module:
 
 datamodule:
     dataset:
+        predict_dataset: null
         resolution_input: 2.5
         patch_size_input: 128
         get_targets:
