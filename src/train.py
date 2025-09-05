@@ -19,6 +19,8 @@ def train(config: DictConfig) :
 
     # Init lightning datamodule
     log.info(f"Instantiating datamodule <{config.datamodule.instance._target_}>")
+    # TO avoid useless initialization of the datasets
+    config.datamodule.dataset.predict_dataset = None
     datamodule = hydra.utils.instantiate(config.datamodule.instance)
 
     # Init lightning module

@@ -99,3 +99,12 @@ class mean_global_computeur :
             return np.sqrt(sum/nb_value)
         return sum/nb_value
     
+class nb_values_global_computer :
+    def __init__(self, name_metric_by_image):
+        self.name_metric_by_image = name_metric_by_image
+    
+    def compute_metrics(self, metrics_local) :
+        if self.name_metric_by_image not in metrics_local :
+            Exception(f"You must first compute {self.name_metric_by_image}")
+        
+        return np.sum([value[1] for value in metrics_local[self.name_metric_by_image]])

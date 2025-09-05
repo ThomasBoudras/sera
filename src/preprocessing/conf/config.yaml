@@ -1,0 +1,3 @@
+defaults:
+  - downloader: default
+  - _self_

@@ -1,3 +1,4 @@
+from tkinter import W
 import geopandas as gpd
 import numpy as np
 import rasterio
@@ -13,7 +14,10 @@ class get_images:
         self.image_loaded_set = image_loaded_set
         self.image_computed_set = image_computed_set
 
-    def __call__(self, bounds, date):
+    def __call__(self, row):
+        bounds = row["geometry"].bounds
+        date = row["grouping_dates"]
+
         res_images = {}
         res_profiles = {}
 
@@ -23,10 +27,11 @@ class get_images:
             res_images[name_image] = image 
             res_profiles[name_image] = profile
 
-        #Retrieving images to be calculated 
-        for name_image, image_computer in self.image_computed_set.items() :
-            image = image_computer.compute_image(res_images, res_profiles)
-            res_images[name_image] = image
+        #Retrieving images to be calculated if they are not None
+        if self.image_computed_set is not None:         
+            for name_image, image_computer in self.image_computed_set.items() :
+                image = image_computer.compute_image(res_images, res_profiles)
+                res_images[name_image] = image
 
         return res_images
 
@@ -41,8 +46,8 @@ class input_image_loader :
 
     def load_image(self, bounds, date):
         if "<date>" in self.path :
-            date = date[:6] + "15"
-            path = self.path.replace("<date>", date)
+            rounded_date = date[:6] + "15"
+            path = self.path.replace("<date>", rounded_date)
         elif "<year>" in self.path :
             path = self.path.replace("<year>", date[:4])
         else:
@@ -67,8 +72,8 @@ class input_image_loader :
         return image, profile
 
 
-class target_image_loader :
-    def __init__(self, path, resolution, resampling_method, scaling_factor, min_image, max_image, open_even_oob):
+class output_image_loader :
+    def __init__(self, path, resolution, resampling_method, scaling_factor, min_image, max_image, open_even_oob, max_date, min_date):
         self.path = path
         self.resolution = resolution
         self.resampling_method = resampling_method
@@ -76,35 +81,25 @@ class target_image_loader :
         self.min_image = min_image
         self.max_image = max_image
         self.open_even_oob = open_even_oob
+        self.max_date = max_date 
+        self.min_date = min_date
 
     def load_image(self, bounds, date):
-        year = date[:4]
-        path = self.path.replace("<year>", year)
+        limited_date = date
+        if self.max_date is not None:
+            limited_date = str(min(int(date), int(self.max_date)))
+
+        if self.min_date is not None:
+            limited_date = str(max(int(limited_date), int(self.min_date)))
+
+        path = self.path
+        if "<year>" in self.path :
+            path = path.replace("<year>", limited_date[:4])
+        if "<date>" in self.path :
+            path = path.replace("<date>", limited_date)
+
         image, profile = get_window(
             path,
-            bounds=bounds,
-            resolution=self.resolution,
-            resampling_method=self.resampling_method,
-            open_even_oob=self.open_even_oob
-            )
-        image = image.astype(np.float32)*self.scaling_factor
-        image = np.clip(image, self.min_image, self.max_image).squeeze()
-
-        return image, profile
-
-class prediction_image_loader :
-    def __init__(self, path, resolution, resampling_method, scaling_factor, min_image, max_image, open_even_oob):
-        self.path = path
-        self.resolution = resolution
-        self.resampling_method = resampling_method
-        self.scaling_factor = scaling_factor
-        self.min_image = min_image
-        self.max_image = max_image
-        self.open_even_oob = open_even_oob
-
-    def load_image(self, bounds, date):
-        image, profile = get_window(
-            image_path=self.path,
             bounds=bounds,
             resolution=self.resolution,
             resampling_method=self.resampling_method,

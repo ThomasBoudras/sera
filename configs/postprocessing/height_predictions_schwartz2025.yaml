@@ -1,7 +1,7 @@
-model : h-sera_h
+model : h-schwartz2025
 min_height : 0
 max_height : 40
-resolution : 2.5
+resolution : 10
 real_patch_size_plot : 500
 nb_jobs : 10
 seed : 12345
@@ -13,10 +13,9 @@ data_dir : /lustre/fsn1/projects/rech/ego/uof45xi/data/
 save_dir : ${data_dir}/logs/metrics/height_map/${model}
 output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
 grouping_dates : lidar_acquisition_date
-version_prediction : test_lidarhd
-version_metrics : test_lidarhd
+version_metrics : test_lidarhd_res10
 
-geometries_path : ${data_dir}/logs/pred_sera/${model}/test_lidarhd/predictions/predict_gdf.geojson
+geometries_path : ${data_dir}/logs/pred_sera/h-sera_h/test_lidarhd/predictions/predict_gdf.geojson
 hydra:
   run:
     dir: ${save_dir}
@@ -43,10 +42,12 @@ get_images :
     
     height_pred : 
       _target_: src.postprocessing.get_images_utils.output_image_loader
-      path: ${data_dir}/logs/pred_sera/${model}/${version_prediction}/predictions/data/${model}_full.vrt
+      path : /lustre/fsn1/projects/rech/ego/uof45xi/data/sota/schwartz2025/<year>/full.vrt
+      #_target_: src.postprocessing.get_images_utils.output_image_loader
+      #path: ${data_dir}/logs/pred_sera/${model}/${name_aoi}/predictions/data/preds/${model}_preds_full.vrt
       resolution: ${resolution}
       resampling_method: ${resampling_method_pred}
-      scaling_factor: 1
+      scaling_factor: 0.01
       min_image: ${min_height}
       max_image: ${max_height}
       open_even_oob: False

@@ -23,7 +23,6 @@ import time
 log = utils.get_logger(__name__)
 
 
-
 @hydra.main(version_base="1.3", config_path="../configs", config_name="config")
 def predict(config: DictConfig) -> None:
    
@@ -55,7 +54,7 @@ def predict(config: DictConfig) -> None:
     save_dir_data = save_dir / "data"
     aoi_gdf_path = save_dir / "predict_gdf.geojson"
     grouped_aoi_gdf_path = save_dir / "grouped_aoi_gdf.geojson"
-
+    
     # Create directories and files, just for the master process (to avoid race conditions)
     if trainer.is_global_zero:
         if save_dir.exists() :
@@ -66,8 +65,6 @@ def predict(config: DictConfig) -> None:
 
         # Create the subdirectories
         (save_dir_tmp / "patch_tifs").mkdir()
-        (save_dir_data / "preds").mkdir()
-
 
         # Get the aoi from the config
         if config.via_bounds is not None and config.via_geojson is None:
@@ -77,14 +74,12 @@ def predict(config: DictConfig) -> None:
             row["geometry"] = box(*bounds)
             aoi_gdf = gpd.GeoDataFrame([row], crs="EPSG:2154")
 
-        elif config.via_bounds is None and config.via_geojson is not None :
+        elif config.via_geojson is not None and config.via_bounds is None :
             aoi_gdf = gpd.read_file(config.via_geojson["path"])
             aoi_gdf = aoi_gdf[aoi_gdf['split'] == config.via_geojson["split"]].reset_index(drop=True) 
-            # aoi_gdf = aoi_gdf[:100] # for debug
         else:
             Exception("via_bounds and via_geojson : one of them must be provided and the other must be null")
 
-        aoi_gdf=aoi_gdf.sample(n=10, replace=True).reset_index(drop=True)
         # Save the aoi to a geojson file for datamodule
         aoi_gdf.to_file(
                 aoi_gdf_path,
@@ -105,13 +100,25 @@ def predict(config: DictConfig) -> None:
                 driver="GeoJSON",
             )
 
-    
-    while not grouped_aoi_gdf_path.exists():
+    # Wait for the master process to be ready, it's not pretty but trainer.startegy.barrier does not work here
+    if trainer.is_global_zero:
+        (save_dir_tmp / "rank_0_ready").touch()
+
+    while not (save_dir_tmp / "rank_0_ready").exists() :
         time.sleep(1)
+
+    if trainer.is_global_zero:
+        time.sleep(3)
+        (save_dir_tmp / "rank_0_ready").unlink()
+        
 
     # Init lightning datamodule
     log.info(f"Instantiating datamodule <{config.datamodule.instance._target_}>")
     config.datamodule.dataset.gdf_path = aoi_gdf_path # we take the new gdf_path
+    # TO avoid useless initialization of the datasets
+    config.datamodule.dataset.train_dataset = None
+    config.datamodule.dataset.val_dataset = None
+    config.datamodule.dataset.test_dataset = None
     datamodule = hydra.utils.instantiate(config.datamodule.instance)
 
     # Init lightning module
@@ -169,10 +176,10 @@ def predict(config: DictConfig) -> None:
         # Get the list of all patch GeoTIFF files in the temporary directory
         patches_path = save_dir_tmp / f"patch_tifs" 
         list_subtif = [file for file in patches_path.iterdir() if file.suffix == ".tif"]  
-        print(f"nb tifs : {len(list_subtif)}")
-
-        for idx, tif_poly in tqdm(enumerate(grouped_aoi_gdf["geometry"]), total=len(grouped_aoi_gdf), desc="Merging tifs") :
-            merge_tifs(idx, tif_poly, list_subtif, save_dir_data, config.run_name) 
+        Parallel(n_jobs=-1)(
+            delayed(merge_tifs)(idx, tif_poly, list_subtif, save_dir_data, config.run_name) 
+            for idx, tif_poly in tqdm(enumerate(grouped_aoi_gdf["geometry"]), total=len(grouped_aoi_gdf), desc="Merging tifs")
+        )
 
         # Create vrt
         create_vrts(save_dir_data, config.run_name)
@@ -220,6 +227,8 @@ def save_images_as_tifs(i_file, rank_dir, save_dir_tmp):
             transform=transform,
         ) as dst:
             dst.write(preds)
+    pred_file.unlink()
+    bounds_file.unlink()
 
 
 def merge_tifs(idx, tif_poly, list_subtif, save_dir_data, model_name):
@@ -233,52 +242,73 @@ def merge_tifs(idx, tif_poly, list_subtif, save_dir_data, model_name):
         save_dir_data (Path): Path to the directory where the merged image will be saved.
         model_name (str): Name of the model used for the predictions.
     """
-    tif_bounds = tif_poly.bounds
-
+    tif_bounds = list(tif_poly.bounds)
+        
     # Filter the tifs that intersect the current patch's bounding box
-    list_tif_intersect = []
+    list_subtif_intersect = []
     for subtif in list_subtif:
         subtif_bounds = subtif.stem.split("_")
-        test_intersect = (
+        if (
             tif_bounds[0] <= int(subtif_bounds[2]) and
             tif_bounds[1] <= int(subtif_bounds[3]) and
             int(subtif_bounds[0]) <= tif_bounds[2] and
             int(subtif_bounds[1]) <= tif_bounds[3]
-        )
-        if test_intersect:
-            list_tif_intersect.append(subtif)
+        ) :
+            list_subtif_intersect.append(subtif)
 
-    # Compute the mean of the images
-    mean_image = None
-    for subtif_file in list_tif_intersect:
-        image, _ = get_window(
+    # To avoid out-of-bounds issues, we extend the bounds of the tif to the global bounds of all subtifs.
+    for subtif in list_subtif_intersect:
+        bounds = subtif.stem.split("_")
+        bounds = [int(bounds[0]), int(bounds[1]), int(bounds[2]), int(bounds[3])]
+        tif_bounds[0] = min(tif_bounds[0], bounds[0])
+        tif_bounds[1] = min(tif_bounds[1], bounds[1])
+        tif_bounds[2] = max(tif_bounds[2], bounds[2])
+        tif_bounds[3] = max(tif_bounds[3], bounds[3])
+
+    # Get resolution from the first subtif
+    with rasterio.open(list_subtif_intersect[0]) as src:
+        resolution = src.transform.a  
+    
+    # Create a window from the tif_bounds with the correct resolution
+    window_width = round((tif_bounds[2] - tif_bounds[0]) / resolution)
+    window_height = round((tif_bounds[3] - tif_bounds[1]) / resolution)
+    window_transform = from_bounds(*tif_bounds, window_width, window_height)
+    
+    mean_image = np.zeros((1,window_height, window_width), dtype=np.float32)
+    nb_values_image = np.zeros((1,window_height, window_width), dtype=np.float32)
+    for subtif_file in list_subtif_intersect:
+        bounds = subtif_file.stem.split("_")
+        bounds = [int(bounds[0]), int(bounds[1]), int(bounds[2]), int(bounds[3])]
+
+        image, profile = get_window(
             subtif_file,
-            tif_bounds,
+            bounds,
             resolution=None,
             resampling_method=None,
-            open_even_oob=True,
         )
-        valid_mask = ~np.isnan(image)
 
-        # Skip if the image contains only NaNs
-        if valid_mask.any() :
-            if mean_image is None:
-                # Initialize arrays with zeros instead of using the first image directly
-                mean_image = np.zeros_like(image, dtype=np.float32)
-                nb_values_image = np.zeros_like(image, dtype=np.float32)
-            
-            # Add valid pixels to the sum and increment the count
-            mean_image[valid_mask] += image.astype(np.float32)[valid_mask]
-            nb_values_image[valid_mask] += 1
+        # Convert world coordinates to pixel coordinates using the window transform
+        subtif_col_start, subtif_row_start = ~window_transform * (bounds[0], bounds[3])
+        subtif_col_end, subtif_row_end = ~window_transform * (bounds[2], bounds[1])
 
-    # Check if no valid images were found
-    if mean_image is None :
-        raise ValueError(f"No tif found for bounds {tif_bounds}, list_tif_intersect: {list_tif_intersect}")
-    
-    valid_mask = ~np.isnan(mean_image)
+        # Convert to integers and ensure they are within bounds
+        subtif_col_start = int(round(subtif_col_start))
+        subtif_row_start = int(round(subtif_row_start))
+        subtif_col_end = int(round(subtif_col_end))
+        subtif_row_end = int(round(subtif_row_end))
+        
+        # Update the mean_image and nb_values_image for the specific region
+        mask_nan = np.isnan(image)
+        mean_image[:,subtif_row_start:subtif_row_end, subtif_col_start:subtif_col_end] = np.nansum([
+            mean_image[:,subtif_row_start:subtif_row_end, subtif_col_start:subtif_col_end],
+            image.astype(np.float32)
+        ], axis=0)
+        nb_values_image[:,subtif_row_start:subtif_row_end, subtif_col_start:subtif_col_end][~mask_nan] += 1
+        
+    valid_mask = nb_values_image != 0
     mean_image[valid_mask] = mean_image[valid_mask] / nb_values_image[valid_mask]
-    
-    
+    mean_image[~valid_mask] = np.nan
+
     # Prepare the georeferencing information for the merged image
     count, height, width = mean_image.shape
     transform = from_bounds(*tif_bounds, width, height)
@@ -303,7 +333,6 @@ def merge_tifs(idx, tif_poly, list_subtif, save_dir_data, model_name):
         blockysize=256,
     ) as dst:
         dst.write(mean_image)
-    
 
 def create_vrts(save_dir_data, model_name):
     vrt_path = save_dir_data / f"{model_name}_full.vrt"

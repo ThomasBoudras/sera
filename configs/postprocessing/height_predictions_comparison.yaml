@@ -1,0 +1,235 @@
+model : comparison-sota
+min_height : 0
+max_height : 40
+resolution : 10
+real_patch_size_plot : 500
+nb_jobs : 10
+seed : 12345
+date_column : lidar_acquisition_date
+print_config : True
+resampling_method_pred : max
+
+data_dir : /lustre/fsn1/projects/rech/ego/uof45xi/data/
+save_dir : ${data_dir}/logs/metrics/height_map/${model}
+output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
+grouping_dates : lidar_acquisition_date
+version_prediction : test_lidarhd
+version_metrics : test_lidarhd_res10
+
+geometries_path : ${data_dir}/logs/pred_sera/h-sera_h/test_lidarhd/predictions/predict_gdf.geojson
+hydra:
+  run:
+    dir: ${save_dir}
+  output_subdir : hydra_logs
+
+get_images : 
+  _target_ : src.postprocessing.get_images_utils.get_images
+  image_loaded_set:
+    sentinel_rgb :
+      _target_: src.postprocessing.get_images_utils.input_image_loader
+      path: ${data_dir}/sentinel/composites/lidarhd/lidar_date_<date>/s2/s2.vrt
+      resolution: null
+      resampling_method: bilinear
+      open_even_oob: True
+      channel_to_keep: [2,1,0]
+      
+    spot_rgb :
+      _target_: src.postprocessing.get_images_utils.input_image_loader
+      path: ${data_dir}/open_canopy/<year>/spot.vrt
+      resolution: null
+      resampling_method: bilinear
+      open_even_oob: True
+      channel_to_keep: [0,1,2]
+    
+    height_target : 
+      _target_: src.postprocessing.get_images_utils.output_image_loader
+      path: ${data_dir}/open_canopy/<year>/lidar.vrt
+      resolution: ${resolution}
+      resampling_method: max
+      scaling_factor: 0.1
+      min_image: ${min_height}
+      max_image: ${max_height}
+      open_even_oob: False
+      max_date: null
+      min_date: null
+
+    height_pred_sera : 
+      _target_: src.postprocessing.get_images_utils.output_image_loader
+      path: ${data_dir}/logs/pred_sera/h-sera_h_max/${version_prediction}/predictions/data/h-sera_h_max_full.vrt
+      resolution: ${resolution}
+      resampling_method: ${resampling_method_pred}
+      scaling_factor: 1
+      min_image: ${min_height}
+      max_image: ${max_height}
+      open_even_oob: False
+      max_date: null
+      min_date: null
+
+    height_pred_lang : 
+      _target_: src.postprocessing.get_images_utils.output_image_loader
+      path : /lustre/fsn1/projects/rech/ego/uof45xi/data/sota/lang/full_2154.vrt
+      resolution: ${resolution}
+      resampling_method: nearest
+      scaling_factor: 1
+      min_image: ${min_height}
+      max_image: ${max_height}
+      open_even_oob: False
+      max_date: null
+      min_date: null
+
+    height_pred_open_canopy : 
+      _target_: src.postprocessing.get_images_utils.output_image_loader
+      path : /lustre/fsstor/projects/rech/ego/commun/fajwel/height_maps/open_canopy_france/<year>/full.vrt
+      resolution: ${resolution}
+      resampling_method: max
+      scaling_factor: 0.1
+      min_image: ${min_height}
+      max_image: ${max_height}
+      open_even_oob: False
+      max_date: null
+      min_date: null
+
+    height_pred_pauls : 
+      _target_: src.postprocessing.get_images_utils.output_image_loader
+      path : /lustre/fsn1/projects/rech/ego/uof45xi/data/sota/paul2025/<year>/paul2025/full.vrt
+      resolution: ${resolution}
+      resampling_method: nearest
+      scaling_factor: 0.01
+      min_image: ${min_height}
+      max_image: ${max_height}
+      open_even_oob: False
+      max_date: 20221231
+      min_date: 20210101
+
+    height_pred_schwartz : 
+      _target_: src.postprocessing.get_images_utils.output_image_loader
+      path : /lustre/fsn1/projects/rech/ego/uof45xi/data/sota/schwartz2025/<year>/full.vrt
+      resolution: ${resolution}
+      resampling_method: nearest
+      scaling_factor: 0.01
+      min_image: ${min_height}
+      max_image: ${max_height}
+      open_even_oob: False
+      max_date: null
+      min_date: null
+  
+  image_computed_set: null
+
+get_metrics_local : null
+get_metrics_global : null
+
+get_plots: 
+  _target_: src.postprocessing.get_plots_utils.get_plots
+  save_dir : ${save_dir}/${version_metrics}_figures
+  nb_plots: 50
+  model_name : ${model}
+  plot_set :
+    height_comparison :
+      _target_ : src.postprocessing.get_plots_utils.plot_model
+      nb_row: 3
+      nb_col : 3
+      size_plot_width: 25
+      size_plot_height: 25
+      graph_list : 
+        - _target_: src.postprocessing.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: "Sentinel-RGB"
+          method_graph: 
+            _target_: src.postprocessing.get_plots_utils.method_imshow 
+            image_name : sentinel_rgb
+            real_patch_size: ${real_patch_size_plot}
+            resolution: 10
+        - _target_: src.postprocessing.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 1
+          graph_title: "Spot-RGB"
+          method_graph: 
+            _target_: src.postprocessing.get_plots_utils.method_imshow 
+            image_name : spot_rgb
+            real_patch_size: ${real_patch_size_plot}
+            resolution: 1.5
+        - _target_: src.postprocessing.get_plots_utils.graph_model
+          idx_row: 0
+          idx_col: 2
+          graph_title: "Target height (<date>)"
+          method_graph: 
+            _target_: src.postprocessing.get_plots_utils.method_imshow 
+            image_name : height_target
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: magma
+            norm : 
+              _target_ : matplotlib.colors.Normalize
+              vmin: ${min_height}
+              vmax : ${max_height}
+        - _target_: src.postprocessing.get_plots_utils.graph_model
+          idx_row: 1
+          idx_col: 0
+          graph_title: "Lang predicted height (Sentinel 2)"
+          method_graph: 
+            _target_: src.postprocessing.get_plots_utils.method_imshow 
+            image_name : height_pred_lang
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: magma
+            norm : 
+              _target_ : matplotlib.colors.Normalize
+              vmin: ${min_height}
+              vmax : ${max_height}
+        - _target_: src.postprocessing.get_plots_utils.graph_model
+          idx_row: 1
+          idx_col: 1
+          graph_title: "Pauls predicted height (Sentinel 1/2)"
+          method_graph: 
+            _target_: src.postprocessing.get_plots_utils.method_imshow 
+            image_name : height_pred_pauls
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: magma
+            norm : 
+              _target_ : matplotlib.colors.Normalize
+              vmin: ${min_height}
+              vmax : ${max_height}
+        - _target_: src.postprocessing.get_plots_utils.graph_model
+          idx_row: 1
+          idx_col: 2
+          graph_title: "SERA predicted height (Sentinel 1/2)"
+          method_graph: 
+            _target_: src.postprocessing.get_plots_utils.method_imshow 
+            image_name : height_pred_sera
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: magma
+            norm : 
+              _target_ : matplotlib.colors.Normalize
+              vmin: ${min_height}
+              vmax : ${max_height}
+        - _target_: src.postprocessing.get_plots_utils.graph_model
+          idx_row: 2
+          idx_col: 1
+          graph_title: "Schwartz predicted height (Sentinel 1/2)"
+          method_graph: 
+            _target_: src.postprocessing.get_plots_utils.method_imshow 
+            image_name : height_pred_schwartz
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: magma
+            norm : 
+              _target_ : matplotlib.colors.Normalize
+              vmin: ${min_height}
+              vmax : ${max_height}
+        - _target_: src.postprocessing.get_plots_utils.graph_model
+          idx_row: 2
+          idx_col: 2
+          graph_title: "Open-Canopy predicted height (Spot)"
+          method_graph: 
+            _target_: src.postprocessing.get_plots_utils.method_imshow 
+            image_name : height_pred_open_canopy
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: magma
+            norm : 
+              _target_ : matplotlib.colors.Normalize
+              vmin: ${min_height}
+              vmax : ${max_height}

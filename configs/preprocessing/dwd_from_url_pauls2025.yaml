@@ -1,0 +1,31 @@
+name: paul2025
+url: projects/worldwidemap/assets/europe_<year>
+
+root_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
+data_dir: ${root_dir}/sota/${name}
+# gdf_path : ${root_dir}/utils/gdf_height_map_initial.geojson
+gdf_path : /lustre/fsn1/projects/rech/ego/uof45xi/data/scratch/geo_no_within.geojson
+grouping_dates: lidar_acquisition_date
+selected_bands: [b1]
+pixel_range: [-32768, 32767]
+min_year: 2020
+max_year: 2022
+split: test
+
+
+n_jobs_parrallelized : 5
+
+resolution : 10
+tile_shape : 5000
+max_tile_size : 10
+country : "France"
+composite_method : MEAN
+
+
+hydra:
+  run :
+    dir : ${data_dir}/logs
+  output_subdir : hydra_logs
+  
+
+

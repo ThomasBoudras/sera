@@ -9,6 +9,8 @@ from pathlib import Path
 from lightning import seed_everything
 from src import global_utils as utils
 from shapely.ops import unary_union
+from joblib import Parallel, delayed
+import os
 
 @hydra.main(version_base="1.3", config_path="../../configs/postprocessing", config_name="height_predictions.yaml")
 def compute_metrics(config: DictConfig) -> None:
@@ -21,59 +23,89 @@ def compute_metrics(config: DictConfig) -> None:
         seed_everything(config.seed)
 
     aoi_gdf = gpd.read_file(config.geometries_path)
-    crs = aoi_gdf.crs
-    # Regrouper les géométries par mois commun
     aoi_gdf["grouping_dates"] = aoi_gdf[config.grouping_dates].astype(str).str[:6] + "15"
-    
-    # Group the geometries by the grouping dates
-    aoi_gdf = (
-        aoi_gdf
-        .groupby("grouping_dates")
-        .agg({ 'geometry': lambda x: unary_union(x) })
-        .reset_index()
-    )
-    aoi_gdf = aoi_gdf.set_geometry('geometry').explode(index_parts=False).reset_index(drop=True)
-    aoi_gdf = gpd.GeoDataFrame(aoi_gdf, geometry='geometry', crs=crs)
     aoi_gdf_path = Path(config.save_dir) / "gdf_metrics.geojson"
     aoi_gdf.to_file(aoi_gdf_path, driver="GeoJSON")
     
-    get_images =  hydra.utils.instantiate(config.get_images)
+    # Split the GeoDataFrame into chunks for parallel processing.
+    # Creating more chunks than jobs is a good practice for load balancing.
+    nb_jobs = config.get("nb_jobs")
+    chunk_size = len(aoi_gdf) // (nb_jobs * 4)
+    chunk_size = chunk_size if chunk_size > 0 else 1
+    aoi_gdf_chunks = [aoi_gdf.iloc[i:i + chunk_size] for i in range(0, len(aoi_gdf), chunk_size)]
+    
     get_metrics_local =  hydra.utils.instantiate(config.get_metrics_local)
-    get_metrics_global =  hydra.utils.instantiate(config.get_metrics_global)
-
+    get_plots =  hydra.utils.instantiate(config.get_plots) if config.get_plots is not None else None 
     if config.get_plots is not None :
-        plot_images =  hydra.utils.instantiate(config.get_plots)
-        nb_plots = min(len(aoi_gdf), plot_images.nb_plots) 
+        nb_plots = int(min(len(aoi_gdf), config.get_plots.nb_plots))
         indice_plot = np.random.choice(len(aoi_gdf), nb_plots, replace=False)
-        count_plot = 0
+    
+    def process_chunk(config, gdf_chunk, indice_plot):
+        """Processes a chunk of the GeoDataFrame."""
+
+        # To avoid bottleneck, we instantiate the get_images here, each job will use its own instance
+        get_images =  hydra.utils.instantiate(config.get_images)
+
+        metrics_list = []
+        for idx_row, row in gdf_chunk.iterrows():
+            bounds = row["geometry"].bounds
+            
+            # Load images only when needed for metrics computation or plotting
+            if get_metrics_local is not None or ((get_plots is not None) and (idx_row in indice_plot)):
+                images = get_images(row=row)
+            
+            # Compute metrics for this row if needed
+            if get_metrics_local is not None:
+                metrics_local = get_metrics_local(images=images, row=row)
+                metrics_list.append(metrics_local)
+            else :
+                metrics_local = {}
+            
+            # Plot for this row if needed
+            if (get_plots is not None) and (idx_row in indice_plot):
+                plot_name_sample = f"{int(bounds[0])}_{int(bounds[1])}"
+                get_plots(images, metrics_local, plot_name_sample=plot_name_sample, row=row)
+            
+            
+        return metrics_list
+
+    # Process chunks in parallel
+    results_in_chunks = Parallel(n_jobs=nb_jobs)(
+        delayed(process_chunk)(
+            config,
+            chunk,
+            indice_plot,
+        )
+        for chunk in tqdm(aoi_gdf_chunks, total=len(aoi_gdf_chunks), desc="Processing chunks")
+    )
+
+    # Flatten the list of lists into a single list of metrics
+    metrics_local_list = [item for sublist in results_in_chunks for item in sublist]
+
+    get_metrics_global =  hydra.utils.instantiate(config.get_metrics_global)    
 
     metrics_global = {}
-    for idx_row, row in tqdm(aoi_gdf.iterrows(), total=len(aoi_gdf), desc="Computes metrics"):
-        bounds = row["geometry"].bounds
-        date = row["grouping_dates"]
-        images = get_images(bounds=bounds, date=date)
-
-        metrics_local = get_metrics_local(images)
-        if (config.get_plots is not None) and (idx_row in indice_plot) :
-            plot_images(images, metrics_local, idx_plot=count_plot)
-            count_plot += 1
-
+    # Aggregate results
+    for metrics_local in metrics_local_list:
         for name__metrics, value_metrics in metrics_local.items() :
             if name__metrics not in metrics_global :
                 metrics_global[name__metrics] = [value_metrics]
             else :
                 metrics_global[name__metrics].append(value_metrics)
-
-    # Compute the average for each metric
-    metrics_global = get_metrics_global(metrics_global)
-    df = pd.DataFrame(list(metrics_global.items()), columns=['Metrics', 'Value'])
-    print(df)
-    output_path_xlsx = Path(config.output_path_xlsx).resolve()
-    if output_path_xlsx.exists() :
-        with pd.ExcelWriter(output_path_xlsx, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-            df.to_excel(writer, index=False, sheet_name=config.version_metrics)
+        
+    if get_metrics_global is not None:
+        # Compute the average for each metric
+        metrics_global = get_metrics_global(metrics_global)
+        df = pd.DataFrame(list(metrics_global.items()), columns=['Metrics', 'Value'])
+        print(df)
+        output_path_xlsx = Path(config.output_path_xlsx).resolve()
+        if output_path_xlsx.exists() :
+            with pd.ExcelWriter(output_path_xlsx, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                df.to_excel(writer, index=False, sheet_name=config.version_metrics)
+        else :
+            df.to_excel(output_path_xlsx, index=False, sheet_name=config.version_metrics)
     else :
-        df.to_excel(output_path_xlsx, index=False, sheet_name=config.version_metrics)
+        print("No metrics global to compute")
 
 if __name__ == "__main__":
     compute_metrics()

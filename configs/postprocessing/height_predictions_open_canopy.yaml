@@ -3,8 +3,11 @@ min_height : 0
 max_height : 40
 resolution : 2.5
 real_patch_size_plot : 500
+nb_jobs : 10
 seed : 12345
 date_column : lidar_acquisition_date
+print_config : True
+resampling_method_pred : max
 
 data_dir : /lustre/fsn1/projects/rech/ego/uof45xi/data/
 save_dir : ${data_dir}/logs/metrics/height_map/${model}
@@ -12,9 +15,7 @@ output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
 grouping_dates : lidar_acquisition_date
 version_metrics : test_lidarhd
 
-#geometries_path : ${data_dir}/logs/pred_sera/${model}/test_lidarhd/predictions/predict_gdf.geojson
 geometries_path : ${data_dir}/logs/pred_sera/h-sera_h/test_lidarhd/predictions/predict_gdf.geojson
-
 hydra:
   run:
     dir: ${save_dir}
@@ -40,9 +41,9 @@ get_images :
       channel_to_keep: [0,1,2]
     
     height_pred : 
-      _target_: src.postprocessing.get_images_utils.target_image_loader
+      _target_: src.postprocessing.get_images_utils.output_image_loader
       path : /lustre/fsstor/projects/rech/ego/commun/fajwel/height_maps/open_canopy_france/<year>/full.vrt
-      #_target_: src.postprocessing.get_images_utils.prediction_image_loader
+      #_target_: src.postprocessing.get_images_utils.output_image_loader
       #path: ${data_dir}/logs/pred_sera/${model}/${name_aoi}/predictions/data/preds/${model}_preds_full.vrt
       resolution: ${resolution}
       resampling_method: max
@@ -50,9 +51,11 @@ get_images :
       min_image: ${min_height}
       max_image: ${max_height}
       open_even_oob: False
+      max_date: null
+      min_date: null
 
     height_target : 
-      _target_: src.postprocessing.get_images_utils.target_image_loader
+      _target_: src.postprocessing.get_images_utils.output_image_loader
       path: ${data_dir}/open_canopy/<year>/lidar.vrt
       resolution: ${resolution}
       resampling_method: max
@@ -60,6 +63,8 @@ get_images :
       min_image: ${min_height}
       max_image: ${max_height}
       open_even_oob: False
+      max_date: null
+      min_date: null
 
     vegetation_mask :
       _target_: src.postprocessing.get_images_utils.mask_image_loader
@@ -68,13 +73,6 @@ get_images :
       resolution: ${resolution}
       classes_to_keep: [5]
     
-    sentinel_mask :
-      _target_: src.postprocessing.get_images_utils.mask_image_loader
-      classification_mask_path: ${data_dir}/open_canopy/<year>/lidar_classification.vrt
-      forest_mask_path: ${data_dir}/open_canopy/forest_mask.parquet
-      resolution: ${resolution}
-      classes_to_keep: [5]
-
   image_computed_set:
     masked_height_pred :
       _target_: src.postprocessing.get_images_utils.masked_image_computer
@@ -115,8 +113,8 @@ get_metrics_local :
       min_target: 2
     component_treecover :
       _target_ : src.postprocessing.get_metrics_local_utils.treecover_local_computer
-      name_pred: masked_height_pred
-      name_target: masked_height_target
+      name_pred: height_pred
+      name_target: height_target
       threshold: 2
 
     mae_local :
@@ -156,11 +154,16 @@ get_metrics_global :
     treecover_global :
       _target_ : src.postprocessing.get_metrics_global_utils.mean_global_computeur
       name_metric_by_image : component_treecover
+    nb_values_global_mae :
+      _target_ : src.postprocessing.get_metrics_global_utils.nb_values_global_computer
+      name_metric_by_image : component_mae
+
 
 get_plots: 
   _target_: src.postprocessing.get_plots_utils.get_plots
-  save_dir : ${save_dir}/${version_metrics}/figures
-  nb_plots: 20
+  save_dir : ${save_dir}/${version_metrics}_figures
+  nb_plots: 50
+  model_name : ${model}
   plot_set :
     height_metrics :
       _target_ : src.postprocessing.get_plots_utils.plot_model

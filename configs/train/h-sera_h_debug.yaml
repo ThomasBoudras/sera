@@ -15,7 +15,6 @@ datamodule:
     instance:
         num_workers: 8
     dataset:
-        predict_dataset: null
         get_targets:
             targets_path: ${data_dir}/open_canopy/
 

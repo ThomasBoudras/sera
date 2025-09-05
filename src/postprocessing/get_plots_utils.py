@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class get_plots :
-    def __init__(self, save_dir, plot_set, nb_plots) :
+    def __init__(self, save_dir, plot_set, nb_plots, model_name) :
         self.save_dir = Path(save_dir).resolve()
         if self.save_dir.exists() :
             shutil.rmtree(self.save_dir)
@@ -12,13 +12,15 @@ class get_plots :
         
         self.plot_set = plot_set
         self.nb_plots = nb_plots
+        self.model_name = model_name
 
-    def __call__(self, images, metrics, idx_plot):
-        for plot_name, plot in self.plot_set.items():
+    def __call__(self, images, metrics, plot_name_sample, row):
+        for plot_name_global, plot in self.plot_set.items():
             fig = plt.figure(figsize=(plot.size_plot_width, plot.size_plot_height))
-            plot.create_plot(images, metrics)
+            plot.create_plot(images, metrics, row)
+            plot_path = self.save_dir / f"{plot_name_global}_{plot_name_sample}_{self.model_name}_plot.jpg"
             fig.savefig(
-                self.save_dir / f"{plot_name}_{idx_plot}_plot.jpg", bbox_inches="tight", pad_inches=0
+                plot_path, bbox_inches="tight", pad_inches=0
             )
             plt.close()
 
@@ -30,10 +32,10 @@ class plot_model :
         self.size_plot_width = size_plot_width
         self.size_plot_height = size_plot_height
     
-    def create_plot(self, images, metrics):
+    def create_plot(self, images, metrics, row):
         for graph in self.graph_list :
             ax = plt.subplot2grid((self.nb_row, self.nb_col), (graph.idx_row, graph.idx_col), rowspan=graph.rowspan, colspan=graph.colspan)
-            graph.create_graph(images, metrics, ax)
+            graph.create_graph(images, metrics, ax, row)
 
         
 class graph_model :
@@ -45,10 +47,17 @@ class graph_model :
         self.rowspan = rowspan
         self.colspan= colspan
 
-    def create_graph(self, images, metrics, ax):
-        self.method_graph(images, metrics, ax)
+    def create_graph(self, images, metrics, ax, row):
+        self.method_graph(images, metrics, ax, row)
+        date = row["grouping_dates"]
         if self.graph_title :
-            ax.set_title(self.graph_title, fontsize=16)
+            graph_title = self.graph_title
+            if "<date>" in graph_title :
+                graph_title = graph_title.replace("<date>", date)
+            if "<year>" in graph_title :
+                graph_title = graph_title.replace("<year>", date[:4])
+            
+            ax.set_title(graph_title, fontsize=16)
 
 
 class method_imshow :
@@ -63,7 +72,7 @@ class method_imshow :
         self.cmap = cmap
         self.norm = norm
 
-    def __call__(self, images, metrics, ax):
+    def __call__(self, images, metrics, ax, row):
         if self.image_name not in images :
             Exception(f"You must first load {self.image_name}")
         image = images[self.image_name]
@@ -81,11 +90,16 @@ class method_imshow :
             else :
                 image = image[x_start:x_stop, y_start:y_stop ]
             
-        if len(image.shape) == 3 :
-            image = np.transpose(image, (1, 2, 0))
-            image = (image - image.min()) / (image.max() - image.min())
-            gain = 0.4/image.mean()
-            image = np.clip(image*gain, 0, 1)
+            if len(image.shape) == 3 :
+                image = np.transpose(image, (1, 2, 0))
+                gain = 0.4/image.mean()
+                image = np.clip(image*gain, 0, 1)
+
+            # Check if the image has only one unique value and modify if needed
+            if "mask" in self.image_name :
+                first_value = image[..., 0, 0]
+                if not np.any(image != first_value):
+                    image[..., 0, 0] = 0
         ax.imshow(image, cmap=self.cmap, norm=self.norm)
         ax.axis("off")
         
@@ -97,7 +111,7 @@ class method_bar :
         self.y_min = y_min
         self.y_max = y_max
 
-    def __call__(self, images, metrics, ax) :
+    def __call__(self, images, metrics, ax, row) :
         for key in self.metrics_list :
             if key not in metrics :
                 Exception(f"You must first compute metric {key}")
@@ -114,7 +128,7 @@ class method_table :
         self.table_width_scale = 0.7
         self.table_height_scale = 1.8
 
-    def __call__(self, images, metrics, ax) :
+    def __call__(self, images, metrics, ax, row) :
         for key in self.metrics_list :
             if key not in metrics :
                 Exception(f"You must first compute metric {key}")

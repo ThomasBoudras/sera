@@ -7,11 +7,10 @@ defaults:
 project : "pred_sera"
 run_version: test_lidarhd
 
-ckpt_path : ${data_dir}/logs/train_sera/${run_name}/${run_version}/best_checkpoints/epoch_031.ckpt
+ckpt_path : ${data_dir}/logs/train_sera/${run_name}/v1_${run_name}/best_checkpoints/epoch_031.ckpt
 load_just_weights: True
 
 save_dir: ${log_dir}/predictions
-merge_method: mean
 
 via_bounds : null
 via_geojson :
@@ -20,9 +19,6 @@ via_geojson :
 
 datamodule:
   dataset:
-    train_dataset: null
-    val_dataset: null
-    test_dataset: null
     predict_dataset: 
       get_inputs: 
         open_even_oob: True

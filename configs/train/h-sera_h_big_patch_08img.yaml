@@ -15,7 +15,6 @@ datamodule:
     instance:
         batch_size: 4
     dataset:
-        predict_dataset: null
         patch_size_input: 48
         patch_size_target: 192
         get_inputs:

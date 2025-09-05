@@ -5,10 +5,10 @@ class get_metrics_local:
     def __init__(self, metrics_set) :
         self.metrics_set = metrics_set
 
-    def __call__(self, images):
+    def __call__(self, images, row):
         metrics = {}
         for metric_name, metric_computer in self.metrics_set.items():
-            metrics[metric_name] =  metric_computer.compute_metrics(images, metrics)
+            metrics[metric_name] =  metric_computer.compute_metrics(images, metrics, row)
         return metrics
 
 
@@ -18,7 +18,7 @@ class true_positive_local_computer:
         self.name_image_1 = name_image_1
         self.name_image_2 = name_image_2
         
-    def compute_metrics(self, images) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_image_1 not in images) or (self.name_image_2) not in images :
             Exception(f"You must first load {self.name_image_1} and {self.name_image_2}")
 
@@ -40,7 +40,7 @@ class false_positive_local_computer:
         self.name_image_1 = name_image_1
         self.name_image_2 = name_image_2
         
-    def compute_metrics(self, images) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_image_1 not in images) or (self.name_image_2) not in images :
             Exception(f"You must first load {self.name_image_1} and {self.name_image_2}")
 
@@ -61,7 +61,7 @@ class false_negative_local_computer:
         self.name_image_1 = name_image_1
         self.name_image_2 = name_image_2
         
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_image_1 not in images) or (self.name_image_2) not in images :
             Exception(f"You must first load {self.name_image_1} and {self.name_image_2}")
 
@@ -82,7 +82,7 @@ class precision_local_computer:
         self.name_true_positive = name_true_positive
         self.name_false_positive = name_false_positive
         
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_true_positive not in metrics_previous) or (self.name_false_positive) not in metrics_previous :
             Exception(f"You must first load {self.name_true_positive} and {self.name_false_positive}")
 
@@ -102,7 +102,7 @@ class  recall_local_computer :
         self.name_true_positive = name_true_positive
         self.name_false_negative = name_false_negative
         
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_true_positive not in images) or (self.name_false_negative) not in images :
             Exception(f"You must first load {self.name_true_positive} and {self.name_false_negative}")
 
@@ -123,7 +123,7 @@ class f1_score_local_computer:
         self.name_false_negative = name_false_negative
         self.name_false_positive = name_false_positive
         
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_true_positive not in images) or (self.name_false_negative) not in images or (self.name_false_positive) not in images :
             Exception(f"You must first load {self.name_true_positive} and {self.name_false_negative} and {self.name_false_positive}")
 
@@ -147,12 +147,13 @@ class mean_local_computer:
         self.metric_component_name = metric_component_name
         self.root = root
         
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if self.metric_component_name not in metrics_previous :
             Exception(f"You must first load {self.metric_component_name}")
         
         metric_component = metrics_previous[self.metric_component_name]
 
+        # if there are no value, the mean is nan, we don't want to take it into account, the problem is due to the target mask
         if metric_component[1] == 0 :
             return np.nan
 
@@ -168,7 +169,7 @@ class mae_component_computer:
         self.name_pred = name_pred
         self.name_target = name_target
         
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_pred not in images) or (self.name_target) not in images :
             Exception(f"You must first load {self.name_pred} and {self.name_target}")
         
@@ -192,7 +193,7 @@ class mae_lower_than_component_computer:
         self.name_target = name_target
         self.threshold = threshold
 
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_pred not in images) or (self.name_target) not in images :
             Exception(f"You must first load {self.name_pred} and {self.name_target}")
 
@@ -218,7 +219,7 @@ class mae_greater_than_component_computer:
         self.name_target = name_target
         self.threshold = threshold
         
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_pred not in images) or (self.name_target) not in images :
             Exception(f"You must first load {self.name_pred} and {self.name_target}")
 
@@ -240,7 +241,7 @@ class rmse_component_computer:
         self.name_pred = name_pred
         self.name_target = name_target
         
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_pred not in images) or (self.name_target) not in images :
             Exception(f"You must first load {self.name_pred} and {self.name_target}")
 
@@ -262,7 +263,7 @@ class me_component_computer:
         self.name_pred = name_pred
         self.name_target = name_target
            
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_pred not in images) or (self.name_target) not in images :
             Exception(f"You must first load {self.name_pred} and {self.name_target}")
 
@@ -285,7 +286,7 @@ class nmae_component_computer:
         self.name_target = name_target
         self.min_target = min_target
 
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_pred not in images) or (self.name_target) not in images :
             Exception(f"You must first load {self.name_pred} and {self.name_target}")
             
@@ -308,7 +309,7 @@ class treecover_local_computer:
         self.name_target = name_target
         self.threshold = threshold
 
-    def compute_metrics(self, images, metrics_previous) :
+    def compute_metrics(self, images, metrics_previous, row) :
         if (self.name_pred not in images) or (self.name_target) not in images :
             Exception(f"You must first load {self.name_pred} and {self.name_target}")
         
@@ -321,13 +322,8 @@ class treecover_local_computer:
 
         mask_pred = image_pred > self.threshold
         mask_target = image_target > self.threshold
-
-        # if there are no target, the treecover is nan, we don't want to take it into account, the problem is due to the target mask
-        if np.sum(mask_target) == 0 :
-            return np.nan
         
         intersection = np.sum(mask_pred & mask_target)
         union = np.sum(mask_pred | mask_target)
         
-
         return intersection, union

@@ -16,7 +16,6 @@ datamodule:
         batch_size: 2
         num_workers: 8
     dataset:
-        predict_dataset: null
         patch_size_input: 64
         patch_size_target: 256
         train_dataset:

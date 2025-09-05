@@ -20,7 +20,6 @@ module:
 
 datamodule:
     dataset:
-        predict_dataset: null
         gdf_path: ${data_dir}/sentinel/composites/lidarhd/gdf_height_map_composites.geojson
         get_targets:
             targets_path: ${data_dir}/open_canopy/
