@@ -5,7 +5,7 @@ from omegaconf import DictConfig
 import geopandas as gpd
 from pathlib import Path
 
-@hydra.main(config_path="../../configs/preprocessing", config_name="get_clean_geojson")
+@hydra.main(config_path="../../configs/preprocessing/datasets", config_name="get_clean_geojson")
 def main(cfg: DictConfig):
     data = gpd.read_file(cfg.gdf_path)
 

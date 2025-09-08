@@ -118,17 +118,17 @@ get_metrics_global:
   metrics_set :
     mae_diff :
       _target_ : src.results.get_metrics_global_utils.mean_global_computeur
-      name_metric_by_image : mae_diff
+      name_metric : mae_diff
     mae_lower_diff:
       _target_ : src.results.get_metrics_global_utils.mean_global_computeur
-      name_metric_by_image : mae_lower_diff
+      name_metric : mae_lower_diff
     rmse_diff :
       _target_ : src.results.get_metrics_global_utils.mean_global_computeur
-      name_metric_by_image : rmse_diff
+      name_metric : rmse_diff
       root : True
     bias_diff :
       _target_ : src.results.get_metrics_global_utils.mean_global_computeur
-      name_metric_by_image : bias_diff
+      name_metric : bias_diff
 
     recall_change :
       _target_ : src.results.get_metrics_global_utils.recall_global_computer
@@ -145,7 +145,7 @@ get_metrics_global:
       name_false_positive: false_positive_change
 
 
-get_plots: 
+get_plots_local: 
   _target_: src.results.get_plots_utils.get_plots
   save_dir : ${save_dir}/${version_metrics_type}/figures
   nb_plots: ${nb_plots}
@@ -340,3 +340,5 @@ get_plots:
             image_name : ctd_target
             cmap: inferno
             norm : null
+
+get_plots_global: null

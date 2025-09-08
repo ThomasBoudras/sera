@@ -82,15 +82,15 @@ class f1_score_global_computer:
 
 
 class mean_global_computeur :
-    def __init__(self, name_metric_by_image, root=False):
-        self.name_metric_by_image =name_metric_by_image 
+    def __init__(self, name_metric, root=False):
+        self.name_metric =name_metric 
         self.root = root
     
     def compute_metrics(self, metrics_local) :
-        if self.name_metric_by_image not in metrics_local :
-            Exception(f"You must first compute {self.name_metric_by_image}")
+        if self.name_metric not in metrics_local :
+            Exception(f"You must first compute {self.name_metric}")
         
-        metric = metrics_local[self.name_metric_by_image]
+        metric = metrics_local[self.name_metric]
 
         sum = np.sum([value[0] for value in metric])
         nb_value = np.sum([value[1] for value in metric])
@@ -100,11 +100,25 @@ class mean_global_computeur :
         return sum/nb_value
     
 class nb_values_global_computer :
-    def __init__(self, name_metric_by_image):
-        self.name_metric_by_image = name_metric_by_image
+    def __init__(self, name_metric):
+        self.name_metric = name_metric
     
     def compute_metrics(self, metrics_local) :
-        if self.name_metric_by_image not in metrics_local :
-            Exception(f"You must first compute {self.name_metric_by_image}")
+        if self.name_metric not in metrics_local :
+            Exception(f"You must first compute {self.name_metric}")
         
-        return np.sum([value[1] for value in metrics_local[self.name_metric_by_image]])
+        return np.sum([value[1] for value in metrics_local[self.name_metric]])
+
+class concat_global_computer:
+    def __init__(self, name_metric, nb_dim):
+        self.name_metric = name_metric
+        self.nb_dim = nb_dim
+    
+    def compute_metrics(self, metrics_local) :
+        if self.name_metric not in metrics_local :
+            Exception(f"You must first compute {self.name_metric}")
+        
+        metric = metrics_local[self.name_metric]
+        if len(metric) == 1:
+            return np.concatenate(metric)
+        return  tuple([np.concatenate([value[i] for value in metric]) for i in range(self.nb_dim)])

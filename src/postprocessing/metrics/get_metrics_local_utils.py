@@ -327,3 +327,117 @@ class treecover_local_computer:
         union = np.sum(mask_pred | mask_target)
         
         return intersection, union
+
+
+class flatten_local_computer:
+    def __init__(self, name_pred, name_target):
+        self.name_pred = name_pred
+        self.name_target = name_target
+        
+    def compute_metrics(self, images, metrics_previous, row) :
+        if self.name_pred not in images or self.name_target not in images :
+            Exception(f"You must first load {self.name_pred} and {self.name_target}")
+        
+        image_pred = images[self.name_pred]
+        image_target = images[self.name_target]
+        
+        nan_mask = np.isnan(image_pred) | np.isnan(image_target)
+        image_pred = image_pred[~nan_mask]
+        image_target = image_target[~nan_mask]
+        
+        return image_pred.flatten(), image_target.flatten()
+
+
+class group_by_bins_local_computer:
+    def __init__(self, name_pred, name_target, name_base, bins, method_metrics):
+        self.name_pred = name_pred
+        self.name_target = name_target
+        self.name_base = name_base
+        self.bins = bins
+        self.method_metrics = getattr(self, method_metrics)
+
+    def absolute_error(self, pred, target):
+        return np.abs(pred - target)
+    
+    def squared_error(self, pred, target):
+        return np.square(pred - target)
+    
+    def error(self, pred, target):
+        return pred - target
+    
+    def compute_metrics(self, images, metrics_previous, row) :
+        if (self.name_pred not in images) or (self.name_target) not in images :
+            Exception(f"You must first load {self.name_pred} and {self.name_target}")
+        
+        target = images[self.name_target]
+        pred = images[self.name_pred]
+
+        nan_mask = np.isnan(target) | np.isnan(pred)
+
+        target = target[~nan_mask]
+        pred = pred[~nan_mask]
+
+
+        bin_metrics = []
+        for i in range(len(self.bins)-1):
+            mask_bin = (target >= self.bins[i]) & (target < self.bins[i+1])
+            bin_metric = self.method_metrics(pred[mask_bin], target[mask_bin]).flatten()
+            bin_metrics.append(bin_metric)
+
+        return bin_metrics
+
+
+class group_by_date_local_computer:
+    """
+    Computer that groups metrics by date bins based on a specified date column.
+    
+    This class processes images to compute metrics for specific date ranges,
+    allowing for temporal analysis of predictions versus targets.
+    
+    Args:
+        name_pred (str): Name of the prediction image in the images dictionary
+        name_target (str): Name of the target image in the images dictionary
+        name_base (str): Base name for the output metrics
+        bins_dates (list): List of date bin tuples defining the date ranges
+        date_column (str): Name of the column containing date information
+        method_metrics (callable): Method to compute metrics between predictions and targets
+    """
+    def __init__(self, name_pred, name_target, name_base, bins_dates, date_column, method_metrics):
+        self.name_pred = name_pred
+        self.name_target = name_target
+        self.name_base = name_base
+        self.bins_dates = bins_dates
+        self.date_column = date_column 
+        self.method_metrics = getattr(self, method_metrics)
+
+    def absolute_error(self, pred, target):
+        return np.abs(pred - target)
+    
+    def squared_error(self, pred, target):
+        return np.square(pred - target)
+    
+    def error(self, pred, target):
+        return pred - target
+        
+    def compute_metrics(self, images, metrics_previous, row) :
+        if (self.name_pred not in images) or (self.name_target) not in images :
+            Exception(f"You must first load {self.name_pred} and {self.name_target}")
+        
+        target = images[self.name_target]
+        pred = images[self.name_pred]
+        
+        nan_mask = np.isnan(target) | np.isnan(pred)
+        target = target[~nan_mask]
+        pred = pred[~nan_mask]
+        
+        month = row[self.date_column][2:4]
+        
+        bin_metrics = []
+        for bin in self.bins_dates:
+            if (month >= bin[0]) and (month <= bin[1]):  # check if the month is in the bin
+                bin_metrics.append(self.method_metrics(pred, target))
+            else : 
+                bin_metrics.append(np.array([]))
+
+        return bin_metrics
+        

@@ -5,8 +5,8 @@ hydra:
     dir : ${data_dir}/logs
   output_subdir : hydra_logs
 
-create_vrts: src.preprocessing.get_clean_dataset_utils.create_vrts_composites
-get_valid_vrts: src.preprocessing.get_clean_dataset_utils.get_valid_vrts_composites
+create_vrts: src.preprocessing.datasets.get_clean_dataset_utils.create_vrts_composites
+get_valid_vrts: src.preprocessing.datasets.get_clean_dataset_utils.get_valid_vrts_composites
 
 n_jobs_parrallelized: -1
 

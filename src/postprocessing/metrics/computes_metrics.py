@@ -12,7 +12,7 @@ from shapely.ops import unary_union
 from joblib import Parallel, delayed
 import os
 
-@hydra.main(version_base="1.3", config_path="../../configs/postprocessing", config_name="height_predictions.yaml")
+@hydra.main(version_base="1.3", config_path="../../configs/postprocessing/metrics", config_name="height_predictions.yaml")
 def compute_metrics(config: DictConfig) -> None:
     
     if config.get("print_config"):
@@ -35,10 +35,10 @@ def compute_metrics(config: DictConfig) -> None:
     aoi_gdf_chunks = [aoi_gdf.iloc[i:i + chunk_size] for i in range(0, len(aoi_gdf), chunk_size)]
     
     get_metrics_local =  hydra.utils.instantiate(config.get_metrics_local)
-    get_plots =  hydra.utils.instantiate(config.get_plots) if config.get_plots is not None else None 
-    if config.get_plots is not None :
-        nb_plots = int(min(len(aoi_gdf), config.get_plots.nb_plots))
-        indice_plot = np.random.choice(len(aoi_gdf), nb_plots, replace=False)
+    get_plots_local =  hydra.utils.instantiate(config.get_plots_local) 
+    if get_plots_local is not None :
+        nb_plots = int(min(len(aoi_gdf), config.get_plots_local.nb_plots))
+        indice_plot_local = np.random.choice(len(aoi_gdf), nb_plots, replace=False)
     
     def process_chunk(config, gdf_chunk, indice_plot):
         """Processes a chunk of the GeoDataFrame."""
@@ -51,7 +51,7 @@ def compute_metrics(config: DictConfig) -> None:
             bounds = row["geometry"].bounds
             
             # Load images only when needed for metrics computation or plotting
-            if get_metrics_local is not None or ((get_plots is not None) and (idx_row in indice_plot)):
+            if get_metrics_local is not None or ((get_plots_local is not None) and (idx_row in indice_plot_local)):
                 images = get_images(row=row)
             
             # Compute metrics for this row if needed
@@ -62,9 +62,9 @@ def compute_metrics(config: DictConfig) -> None:
                 metrics_local = {}
             
             # Plot for this row if needed
-            if (get_plots is not None) and (idx_row in indice_plot):
+            if (get_plots_local is not None) and (idx_row in indice_plot):
                 plot_name_sample = f"{int(bounds[0])}_{int(bounds[1])}"
-                get_plots(images, metrics_local, plot_name_sample=plot_name_sample, row=row)
+                get_plots_local(images, metrics_local, plot_name_sample=plot_name_sample, row=row)
             
             
         return metrics_list
@@ -74,28 +74,28 @@ def compute_metrics(config: DictConfig) -> None:
         delayed(process_chunk)(
             config,
             chunk,
-            indice_plot,
+            indice_plot_local,
         )
         for chunk in tqdm(aoi_gdf_chunks, total=len(aoi_gdf_chunks), desc="Processing chunks")
     )
 
-    # Flatten the list of lists into a single list of metrics
+    # Flatten the list of lists of metric dicts into a single list of metric dicts
     metrics_local_list = [item for sublist in results_in_chunks for item in sublist]
-
+    
+    # Compute global metrics
     get_metrics_global =  hydra.utils.instantiate(config.get_metrics_global)    
-
-    metrics_global = {}
-    # Aggregate results
-    for metrics_local in metrics_local_list:
-        for name__metrics, value_metrics in metrics_local.items() :
-            if name__metrics not in metrics_global :
-                metrics_global[name__metrics] = [value_metrics]
-            else :
-                metrics_global[name__metrics].append(value_metrics)
-        
     if get_metrics_global is not None:
-        # Compute the average for each metric
-        metrics_global = get_metrics_global(metrics_global)
+
+        # Aggregate local results
+        metrics_local_aggregated = {}
+        for metrics_local in metrics_local_list:
+            for name_metrics, value_metrics in metrics_local.items() :
+                if name_metrics not in metrics_local_aggregated :
+                    metrics_local_aggregated[name_metrics] = [value_metrics]
+                else :
+                    metrics_local_aggregated[name_metrics].append(value_metrics)
+        
+        metrics_global = get_metrics_global(metrics_local_aggregated)
         df = pd.DataFrame(list(metrics_global.items()), columns=['Metrics', 'Value'])
         print(df)
         output_path_xlsx = Path(config.output_path_xlsx).resolve()
@@ -105,7 +105,13 @@ def compute_metrics(config: DictConfig) -> None:
         else :
             df.to_excel(output_path_xlsx, index=False, sheet_name=config.version_metrics)
     else :
-        print("No metrics global to compute")
+        metrics_global = {}
+
+    # Plot global metrics if needed
+    get_plots_global = hydra.utils.instantiate(config.get_plots_global) 
+    if get_plots_global is not None:
+        get_plots_global(metrics_global)
+        
 
 if __name__ == "__main__":
     compute_metrics()

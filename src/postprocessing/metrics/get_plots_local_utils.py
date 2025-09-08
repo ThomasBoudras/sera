@@ -2,8 +2,9 @@ from pathlib import Path
 import shutil
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 
-class get_plots :
+class get_plots_local :
     def __init__(self, save_dir, plot_set, nb_plots, model_name) :
         self.save_dir = Path(save_dir).resolve()
         if self.save_dir.exists() :
@@ -15,10 +16,10 @@ class get_plots :
         self.model_name = model_name
 
     def __call__(self, images, metrics, plot_name_sample, row):
-        for plot_name_global, plot in self.plot_set.items():
+        for plot_name_base, plot in self.plot_set.items():
             fig = plt.figure(figsize=(plot.size_plot_width, plot.size_plot_height))
             plot.create_plot(images, metrics, row)
-            plot_path = self.save_dir / f"{plot_name_global}_{plot_name_sample}_{self.model_name}_plot.jpg"
+            plot_path = self.save_dir / f"{plot_name_base}_{plot_name_sample}_{self.model_name}_plot.jpg"
             fig.savefig(
                 plot_path, bbox_inches="tight", pad_inches=0
             )
@@ -80,15 +81,13 @@ class method_imshow :
         if self.real_patch_size is not None :
             # We crop the image to the patch size percentage
             height, width = image.shape[-2], image.shape[-1]
-            x_start = int(height/2 - self.patch_size/2) # we center the crop
-            x_stop = int(x_start + self.patch_size)
-            y_start = int(width/2 - self.patch_size/2) # we center the crop
-            y_stop = int(y_start + self.patch_size)
-
-            if len(image.shape) > 2 :
+            if self.patch_size is not None :
+                x_start = int(height/2 - self.patch_size/2) # we center the crop
+                x_stop = int(x_start + self.patch_size)
+                y_start = int(width/2 - self.patch_size/2) # we center the crop
+                y_stop = int(y_start + self.patch_size)
+                
                 image = image[..., x_start:x_stop, y_start:y_stop ]
-            else :
-                image = image[x_start:x_stop, y_start:y_stop ]
             
             if len(image.shape) == 3 :
                 image = np.transpose(image, (1, 2, 0))
@@ -153,3 +152,4 @@ class method_table :
         table.scale(self.table_width_scale, self.table_height_scale)
         
         ax.axis('off')
+

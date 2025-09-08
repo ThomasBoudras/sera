@@ -12,7 +12,7 @@ from pathlib import Path
 from joblib import Parallel, delayed
 from tqdm import tqdm
 
-@hydra.main(version_base=None, config_path="../../configs/preprocessing", config_name="dwd_schwartz2025")
+@hydra.main(version_base=None, config_path="../../configs/preprocessing/download", config_name="dwd_schwartz2025")
 @retry(exceptions=Exception, delay=10, tries=100)
 def main(cfg: DictConfig) -> None:    
 

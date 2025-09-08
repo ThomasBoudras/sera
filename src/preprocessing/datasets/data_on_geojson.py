@@ -11,7 +11,7 @@ from scipy.stats import t
 from collections import defaultdict
 import json
 
-@hydra.main(config_path="../../configs/preprocessing", config_name="data_on_geojson")
+@hydra.main(config_path="../../configs/preprocessing/datasets", config_name="data_on_geojson")
 def main(config):
     save_dir = Path(config.save_dir).resolve()
     gdf_path = Path(config.geojson_path).resolve()
