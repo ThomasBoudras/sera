@@ -8,11 +8,10 @@ import hydra
 from pathlib import Path
 from lightning import seed_everything
 from src import global_utils as utils
-from shapely.ops import unary_union
 from joblib import Parallel, delayed
-import os
 
-@hydra.main(version_base="1.3", config_path="../../configs/postprocessing/metrics", config_name="height_predictions.yaml")
+
+@hydra.main(version_base="1.3", config_path="../../../configs/postprocessing/metrics", config_name="height_predictions.yaml")
 def compute_metrics(config: DictConfig) -> None:
     
     if config.get("print_config"):
@@ -39,6 +38,8 @@ def compute_metrics(config: DictConfig) -> None:
     if get_plots_local is not None :
         nb_plots = int(min(len(aoi_gdf), config.get_plots_local.nb_plots))
         indice_plot_local = np.random.choice(len(aoi_gdf), nb_plots, replace=False)
+    else :
+        indice_plot_local = None
     
     def process_chunk(config, gdf_chunk, indice_plot):
         """Processes a chunk of the GeoDataFrame."""
@@ -96,7 +97,15 @@ def compute_metrics(config: DictConfig) -> None:
                     metrics_local_aggregated[name_metrics].append(value_metrics)
         
         metrics_global = get_metrics_global(metrics_local_aggregated)
-        df = pd.DataFrame(list(metrics_global.items()), columns=['Metrics', 'Value'])
+
+        if get_metrics_global.metrics_to_print == "all":
+            metrics_to_print = metrics_global
+        else:
+            metrics_to_print = {}
+            for metric in get_metrics_global.metrics_to_print:
+                metrics_to_print[metric] = metrics_global[metric]
+
+        df = pd.DataFrame(list(metrics_to_print.items()), columns=['Metrics', 'Value'])
         print(df)
         output_path_xlsx = Path(config.output_path_xlsx).resolve()
         if output_path_xlsx.exists() :

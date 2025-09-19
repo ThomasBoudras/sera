@@ -19,7 +19,7 @@ from geefetch.data.get import download_custom
 from geefetch.data.satellites.custom import CustomSatellite
 from geefetch.utils.enums import CompositeMethod
 
-@hydra.main(version_base=None, config_path="../../configs/preprocessing/download", config_name="dwd_from_url_pauls2025")
+@hydra.main(version_base=None, config_path="../../../configs/preprocessing/download", config_name="dwd_from_url_pauls2025")
 # @retry(exceptions=Exception, delay=10, tries=100)
 def main(cfg: DictConfig) -> None:    
 

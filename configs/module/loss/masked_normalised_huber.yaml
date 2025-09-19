@@ -1,0 +1,5 @@
+_target_: src.module.loss.masked_huber.MaskedNormalisedHuber
+reduction: mean   
+beta: 0.1
+max_value: 50
+min_value: 5

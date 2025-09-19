@@ -149,7 +149,22 @@ class log_5d_s1_s2_images:
             input_images_t = input_images[:, t, :, :, :]
             input_images_t = make_grid(input_images_t, normalize=True)
             experiment.add_image(f"input_images/{stage}/time_{t}", input_images_t, global_step=0)  # As the input are the same each epoch, we dont specify the epoch
-        
+
+
+class log_5d_s1_s2_images_revisit(log_5d_s1_s2_images):
+    """
+    Class for logging 5D sentinel-1/sentinel-2 images (num_samples, time, channels, height, width) to tensorboard.
+
+    Args:
+        None
+    """
+    def __call__(self, inputs, experiment, stage):
+        input_separator = inputs.shape[1] // 2
+        input_images_t1 = inputs[:, :input_separator, :, :, :].copy()
+        input_images_t2 = inputs[:, input_separator:, :, :, :].copy()
+        super().__call__(input_images_t1, experiment, f"{stage}_t1")
+        super().__call__(input_images_t2, experiment, f"{stage}_t2")
+
 
 class log_4d_spot_images:
     """

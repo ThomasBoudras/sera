@@ -85,7 +85,6 @@ class changeMapDataset(Dataset):
     def __getitem__(self, ix):
         row_gdf = self.gdf.loc[ix]
         bounds = list(row_gdf["geometry"].bounds)
-        classification_year = row_gdf["classification_year"]
 
         #Random Crop
         if self.data_augmentation and self.stage != "predict" : 
@@ -129,8 +128,6 @@ class changeMapDataset(Dataset):
             meta_data[key + "_t2"] = value
         for key, value in metadata_targets_t2.items() :
             meta_data[key + "_t2"] = value
-
-        meta_data["classification_years"] = torch.tensor(int(classification_year))
 
         meta_data["bounds"] = torch.tensor(bounds)
         

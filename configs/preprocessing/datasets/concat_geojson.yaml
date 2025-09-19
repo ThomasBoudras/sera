@@ -1,0 +1,13 @@
+geojson_paths:
+  - ${data_dir}/utils/gdf_height_map_composites.geojson
+  - ${data_dir}/utils/gdf_height_map_composites_unsaved.geojson
+output_path: ${data_dir}/utils/gdf_diff_map_initial.geojson
+
+train_proportion: 0.75
+val_proportion: 0.10
+test_proportion: 0.15
+
+hydra:
+  run :
+    dir : ${data_dir}/logs
+  output_subdir : hydra_logs

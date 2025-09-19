@@ -349,10 +349,9 @@ class flatten_local_computer:
 
 
 class group_by_bins_local_computer:
-    def __init__(self, name_pred, name_target, name_base, bins, method_metrics):
+    def __init__(self, name_pred, name_target, bins, method_metrics):
         self.name_pred = name_pred
         self.name_target = name_target
-        self.name_base = name_base
         self.bins = bins
         self.method_metrics = getattr(self, method_metrics)
 
@@ -381,7 +380,10 @@ class group_by_bins_local_computer:
         bin_metrics = []
         for i in range(len(self.bins)-1):
             mask_bin = (target >= self.bins[i]) & (target < self.bins[i+1])
-            bin_metric = self.method_metrics(pred[mask_bin], target[mask_bin]).flatten()
+            if mask_bin.sum() > 0:
+                bin_metric = self.method_metrics(pred[mask_bin], target[mask_bin]).flatten()
+            else :
+                bin_metric = np.array([])
             bin_metrics.append(bin_metric)
 
         return bin_metrics
@@ -402,10 +404,9 @@ class group_by_date_local_computer:
         date_column (str): Name of the column containing date information
         method_metrics (callable): Method to compute metrics between predictions and targets
     """
-    def __init__(self, name_pred, name_target, name_base, bins_dates, date_column, method_metrics):
+    def __init__(self, name_pred, name_target, bins_dates, date_column, method_metrics):
         self.name_pred = name_pred
         self.name_target = name_target
-        self.name_base = name_base
         self.bins_dates = bins_dates
         self.date_column = date_column 
         self.method_metrics = getattr(self, method_metrics)
@@ -430,11 +431,11 @@ class group_by_date_local_computer:
         target = target[~nan_mask]
         pred = pred[~nan_mask]
         
-        month = row[self.date_column][2:4]
-        
+        month = int(row[self.date_column][4:6])
+
         bin_metrics = []
         for bin in self.bins_dates:
-            if (month >= bin[0]) and (month <= bin[1]):  # check if the month is in the bin
+            if (month >= int(bin[0])) and (month <= int(bin[1])):  # check if the month is in the bin
                 bin_metrics.append(self.method_metrics(pred, target))
             else : 
                 bin_metrics.append(np.array([]))

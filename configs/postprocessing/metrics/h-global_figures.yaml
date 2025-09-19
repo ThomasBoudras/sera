@@ -1,0 +1,252 @@
+# model : h-sera_h_global_figures
+model : h-pauls2025_global_figures
+min_height : 0
+max_height : 50
+resolution : 2.5  
+real_patch_size_plot : 500
+nb_jobs : 1
+seed : 12345
+date_column : lidar_acquisition_date
+print_config : True
+resampling_method_pred : max
+
+data_dir : /lustre/fsn1/projects/rech/ego/uof45xi/data/
+save_dir : ${data_dir}/logs/metrics/height_map/${model}
+output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
+grouping_dates : lidar_acquisition_date
+version_prediction : test_lidarhd
+version_metrics : test_lidarhd
+
+geometries_path : ${data_dir}/logs/pred_sera/h-sera_h/test_lidarhd/predictions/predict_gdf.geojson
+hydra:
+  run:
+    dir: ${save_dir}
+  output_subdir : hydra_logs
+
+get_images : 
+  _target_ : src.postprocessing.metrics.get_images_utils.get_images
+  image_loaded_set:    
+    height_target : 
+      _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      path: ${data_dir}/open_canopy/<year>/lidar.vrt
+      resolution: ${resolution}
+      resampling_method: max
+      scaling_factor: 0.1
+      min_image: ${min_height}
+      max_image: ${max_height}
+      open_even_oob: False
+      max_date: null
+      min_date: null
+
+    # height_pred : 
+    #   _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+    #   path: ${data_dir}/logs/pred_sera/h-sera_h_max/${version_prediction}/predictions/data/h-sera_h_max_full.vrt
+    #   resolution: ${resolution}
+    #   resampling_method: max
+    #   scaling_factor: 1
+    #   min_image: ${min_height}
+    #   max_image: ${max_height}
+    #   open_even_oob: False
+    #   max_date: null
+    #   min_date: null
+
+    height_pred : 
+      _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      path : /lustre/fsn1/projects/rech/ego/uof45xi/data/sota/paul2025/<year>/paul2025/full.vrt
+      #_target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      #path: ${data_dir}/logs/pred_sera/${model}/${name_aoi}/predictions/data/preds/${model}_preds_full.vrt
+      resolution: ${resolution}
+      resampling_method: bilinear
+      scaling_factor: 0.01
+      min_image: ${min_height}
+      max_image: ${max_height}
+      open_even_oob: False
+      max_date: 20221231
+      min_date: 20210101
+
+  
+  image_computed_set: null
+
+get_metrics_local : 
+  _target_: src.postprocessing.metrics.get_metrics_local_utils.get_metrics_local
+  metrics_set :
+    bins_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_bins_local_computer
+      name_pred : height_pred
+      name_target : height_target
+      bins : [0, 2, 5, 10, 15, 20, 30, 60]
+      method_metrics : absolute_error
+
+    bins_error :
+      _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_bins_local_computer
+      name_pred : height_pred
+      name_target : height_target
+      bins : [0, 2, 5, 10, 15, 20, 30, 60]
+      method_metrics : error
+
+    bins_date_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_date_local_computer
+      name_pred : height_pred
+      name_target : height_target
+      bins_dates : [["01", "03"], ["04", "06"], ["07", "09"], ["10", "12"]]
+      date_column : lidar_acquisition_date
+      method_metrics : absolute_error
+
+    bins_date_squared_error :
+      _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_date_local_computer
+      name_pred : height_pred
+      name_target : height_target
+      bins_dates : [["01", "03"], ["04", "06"], ["07", "09"], ["10", "12"]]
+      date_column : lidar_acquisition_date
+      method_metrics : squared_error
+    
+    flatten_target_pred :
+      _target_: src.postprocessing.metrics.get_metrics_local_utils.flatten_local_computer
+      name_pred : height_pred
+      name_target : height_target
+
+get_metrics_global : 
+  _target_: src.postprocessing.metrics.get_metrics_global_utils.get_metrics_global
+  metrics_to_print : ["bins_date_mean_absolute_error", "bins_date_std_absolute_error", "bins_date_mean_squared_error", "bins_date_std_squared_error", "bins_mean_absolute_error", "bins_std_absolute_error", "bins_mean_error", "bins_std_error"]
+  metrics_set :
+    bins_tuples_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_absolute_error
+    bins_tuples_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_error
+    bins_date_tuples_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_date_absolute_error
+    bins_date_tuples_squared_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_date_squared_error
+    
+    bins_mean_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.mean_tuples_global_computer
+      name_metric : bins_absolute_error
+    bins_mean_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.mean_tuples_global_computer
+      name_metric : bins_error
+    bins_date_mean_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.mean_tuples_global_computer
+      name_metric : bins_date_absolute_error
+    bins_date_mean_squared_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.mean_tuples_global_computer
+      name_metric : bins_date_squared_error
+
+    bins_std_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.std_tuples_global_computer
+      name_metric : bins_absolute_error
+    bins_std_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.std_tuples_global_computer
+      name_metric : bins_error
+    bins_date_std_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.std_tuples_global_computer
+      name_metric : bins_date_absolute_error
+    bins_date_std_squared_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.std_tuples_global_computer
+      name_metric : bins_date_squared_error
+
+    flatten_tuples_target_pred :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : flatten_target_pred
+
+
+get_plots_local: null
+
+get_plots_global: 
+  _target_: src.postprocessing.metrics.get_plots_global_utils.get_plots_global
+  save_dir : ${save_dir}/${version_metrics}_figures
+  model_name : ${model}
+  plot_set :
+    metrics_by_bins :
+      _target_: src.postprocessing.metrics.get_plots_global_utils.plot_model
+      nb_row: 4
+      nb_col : 2
+      size_plot_width: 10
+      size_plot_height: 10
+      graph_list :
+        - _target_: src.postprocessing.metrics.get_plots_global_utils.graph_model
+          idx_row : 0
+          idx_col : 0
+          graph_title : "Bins Absolute Error"
+          rowspan: 1
+          colspan: 2
+          method_graph:
+            _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
+            metric_name: bins_tuples_absolute_error
+            bins : ["0-2", "2-5", "5-10", "10-15", "15-20", "20-30", "30-60"]
+            x_label : "Bins"
+            y_label : "Absolute Error (m)"
+            y_min: -0.5
+            y_max: 15
+
+        - _target_: src.postprocessing.metrics.get_plots_global_utils.graph_model
+          idx_row : 1
+          idx_col : 0
+          graph_title : "Bins Error"
+          rowspan: 1
+          colspan: 2
+          method_graph:
+            _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
+            metric_name: bins_tuples_error
+            bins : ["0-2", "2-5", "5-10", "10-15", "15-20", "20-30", "30-60"]
+            x_label : "Bins"
+            y_label : "Error (m)"
+            y_min: -15
+            y_max: 15
+
+        - _target_: src.postprocessing.metrics.get_plots_global_utils.graph_model
+          idx_row : 2
+          idx_col : 0
+          graph_title : "Bins by Date absolute Error"
+          rowspan: 1
+          colspan: 2
+          method_graph:
+            _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
+            metric_name: bins_date_tuples_absolute_error
+            bins : ["Winter", "Spring", "Summer", "Autumn"]
+            x_label : "Bins"
+            y_label : "Absolute Error (m)"
+            y_min: -0.5
+            y_max: 12.5
+
+        - _target_: src.postprocessing.metrics.get_plots_global_utils.graph_model
+          idx_row : 3
+          idx_col : 0
+          graph_title : "Bins by Date squared Error"
+          rowspan: 1
+          colspan: 2
+          method_graph:
+            _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
+            metric_name: bins_date_tuples_squared_error
+            bins : ["Winter", "Spring", "Summer", "Autumn"]
+            x_label : "Bins"
+            y_label : "Squared Error (m^2)"
+            y_min: -0.5
+            y_max: 25
+    
+    scatter_plot_target_pred :
+      _target_: src.postprocessing.metrics.get_plots_global_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot_width: 5
+      size_plot_height: 5
+      graph_list :
+        - _target_: src.postprocessing.metrics.get_plots_global_utils.graph_model
+          idx_row : 0
+          idx_col : 0
+          graph_title : "Scatter Plot Target Pred"
+          rowspan: 1
+          colspan: 1
+          method_graph:
+            _target_: src.postprocessing.metrics.get_plots_global_utils.method_scatter_density
+            metric_name: flatten_tuples_target_pred
+            x_label: "Target"
+            y_label: "Pred"
+            min_range: ${min_height}
+            max_range: ${max_height}
+            bins: 30
+            metrics_plot: ["r2"]
+            max_points_on_scatter: null

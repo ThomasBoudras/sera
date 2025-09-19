@@ -3,7 +3,8 @@ from osgeo import gdal
 import shutil
 import rasterio
 from omegaconf import DictConfig, OmegaConf
-from rasterio.windows import from_bounds
+from rasterio.windows import from_bounds as from_bounds_window
+from rasterio.transform import from_bounds as from_bounds_transform
 from tqdm import tqdm
 import logging
 from pathlib import Path
@@ -14,19 +15,20 @@ from rasterio.features import geometry_mask
 from shapely.geometry import mapping, shape
 import matplotlib.pyplot as plt
 from rasterio.plot import show
-import os
 
+from src.global_utils import get_window
 
-def create_grid(bounds, tile_size):
+def create_grid(bounds, tile_size, resolution, out_of_bounds_avoided):
     """
     Create a grid of square tiles within the given bounds.
 
-    Parameters:
-    - bounds: A tuple of (min_x, min_y, max_x, max_y) in the same CRS as tile_size.
-    - tile_size: The edge length of the square tile in meters.
+    Args:
+        bounds (tuple): A tuple of (min_x, min_y, max_x, max_y) in the same CRS as tile_size
+        tile_size (float): The edge length of the square tile in meters
+        resolution (float): The resolution of the tiles in meters
 
     Returns:
-    - A list of tuples (min_x, min_y, max_x, max_y) representing the grid tiles.
+        list: A list of tuples (min_x, min_y, max_x, max_y) representing the grid tiles
     """
     min_x, min_y, max_x, max_y = bounds
     width = max_x - min_x
@@ -37,20 +39,27 @@ def create_grid(bounds, tile_size):
     y_count = int(np.ceil(height / tile_size))
 
     # Generate the tiles
-    tiles = []
+    bounds_tiles = []
     for x in range(x_count):
         for y in range(y_count):
             # Calculate the tile's bounds
-            tile_min_x = min_x + x * tile_size 
+            tile_min_x = min_x + x * tile_size
             tile_min_y = min_y + y * tile_size 
-            tile_max_x = min(tile_min_x + tile_size, max_x) 
-            tile_max_y = min(tile_min_y + tile_size, max_y) 
+            if resolution is not None:
+                tile_min_x = tile_min_x - ((tile_min_x - min_x) % resolution) # align to resolution
+                tile_min_y = tile_min_y - ((tile_min_y - min_y) % resolution) # align to resolution
+            
+            tile_max_x = tile_min_x + tile_size
+            tile_max_y = tile_min_y + tile_size
+            if out_of_bounds_avoided:
+                tile_max_x = min(tile_max_x, max_x) 
+                tile_max_y = min(tile_max_y, max_y) 
 
             # Create the tile as a a tuple of bounds and add it to the list
-            tile = (int(tile_min_x), int(tile_min_y), int(tile_max_x), int(tile_max_y))
-            tiles.append(tile)
+            bounds_tile = (tile_min_x, tile_min_y, tile_max_x, tile_max_y)
+            bounds_tiles.append(bounds_tile)
 
-    return tiles
+    return bounds_tiles
 
 
 def create_vrt(files_list, output_path):
@@ -60,107 +69,54 @@ def create_vrt(files_list, output_path):
     dataset = None  # Close the dataset
     
 
-def regroup_tiles(
-    cfg,
-    initial_tifs_path,
-    regrouped_tifs_path,
-):
-        
-    list_tif = [file for file in initial_tifs_path.iterdir() if file.endswith(".tif")]
-    vrt_path = initial_tifs_path / "full.vrt"
-    create_vrt(list_tif, vrt_path)
-
-    if regrouped_tifs_path.exists():
-        shutil.rmtree(regrouped_tifs_path)
-    regrouped_tifs_path.mkdir(parents=True)
-
-    with rasterio.open(vrt_path) as src:
-        vrt_bounds = src.bounds
-        bounds = vrt_bounds.left, vrt_bounds.bottom, vrt_bounds.right, vrt_bounds.top
-
-    # define new tiles regions, so as to match original tiles without overlaps
-    grid_tiles = create_grid(bounds, cfg.tile_size)
-
-    new_files_list = []
-    with rasterio.open(vrt_path) as src:
-        nodata_value = cfg.nodata if cfg.nodata != "nan" else np.nan
-        vrt_bounds = src.bounds
-        original_crs = src.crs
-        target_crs = "EPSG:2154"
-
-        for new_tile_geometry in tqdm(grid_tiles, desc="Processing each new tile"):
-            (min_x, min_y, max_x, max_y) = new_tile_geometry
-            out_path = regrouped_tifs_path / f"reshaped_tif_{min_x}_{min_y}_{max_x}_{max_y}.tif"
-                        
-            # Check if the window is within the VRT
-            if (
-                new_tile_geometry[0] >= vrt_bounds.left
-                and new_tile_geometry[2] <= vrt_bounds.right
-                and new_tile_geometry[1] >= vrt_bounds.bottom
-                and new_tile_geometry[3] <= vrt_bounds.top
-            ):
-                window = from_bounds(*new_tile_geometry, src.transform)
-                window_data = src.read(window=window).astype(np.float32)
-                if not (window_data == nodata_value).all():
-                    # Define the transform for the new (windowed) dataset
-                    window_transform = src.window_transform(window)
-                    # Create a new dataset based on the window
-                    new_files_list.append(out_path)
-                    
-                    if original_crs.to_string() != target_crs:
-                        raise Exception(f"Tiff {vrt_path} has a different SRC from EPSG:2154")
-                    
-                    with rasterio.open(
-                        out_path,
-                        "w",
-                        driver="GTiff",
-                        height=window_data.shape[1],
-                        width=window_data.shape[2],
-                        count=src.count,
-                        dtype="float32",
-                        crs=src.crs,
-                        transform=window_transform,
-                        nodata=nodata_value
-                    ) as dst:
-                        dst.write(window_data)
-            else:
-                raise ValueError(f"Tile {new_tile_geometry} is outside the VRT bounds.")
-
-    vrt_path = regrouped_tifs_path / "full.vrt"
-    create_vrt(new_files_list, vrt_path)
-
-
-def get_nan_mask_from_lidar(
+def get_lidar_image_and_mask(
     lidar_path: str,
     bounds: tuple,
     replace_zero: bool,
-    min_area
+    min_area,
+    resolution_target: float,
+    no_data_value: any,
 ):
     """
     Generate a NaN mask from a lidar file for a given area.
     """
-    with rasterio.open(lidar_path) as src:
-        window = from_bounds(*bounds, transform=src.transform)
-        transform_image = rasterio.windows.transform(window, src.transform)
+    image, profile = get_window(
+        image_path=lidar_path,
+        bounds=bounds,
+        resolution=resolution_target,
+        resampling_method="max",
+        open_even_oob=True,
+    )
+    if image is None:
+        return None, None, None, None
 
-        image = src.read(1, window=window, boundless=True, fill_value=np.nan).astype(np.float32)
-        image[image == src.nodata] = np.nan
-        image[image < 0] = np.nan
-        
-        image = np.pad(image, pad_width=1, mode='constant', constant_values=np.nan)
-        
-        mask = ~np.isfinite(image)
-        if replace_zero : 
-            mask = np.logical_or(mask, image == 0)
+    image = image.astype(np.float32).squeeze()
+    if np.isfinite(image).sum() == 0:
+        return None, None, None, None
+    
+    nodata_value_num = no_data_value if no_data_value != "nan" else np.nan
 
-        tif_meta = src.meta.copy()
-        tif_meta.update({
-            "height": window.height,
-            "width": window.width,
-            "transform": transform_image,
-            "dtype": "float32",
-            "driver": "GTiff"
-        })
+    image[~np.isfinite(image)] = np.nan
+    image[image == nodata_value_num] = np.nan
+    image[image < 0] = np.nan
+    if "nodata" in profile and not np.isnan(profile["nodata"]):
+        image[image == profile["nodata"]] = np.nan
+
+    height, width = image.shape[-2], image.shape[-1]
+    image = np.pad(image, pad_width=((1,1), (1,1)), mode='constant', constant_values=np.nan)
+
+    transform_image = profile["transform"]
+    mask = ~np.isnan(image)
+    if replace_zero : 
+        mask = np.logical_and(mask, image > 0)
+
+    tif_meta = profile.copy()
+    tif_meta.update({
+        "height": height,
+        "width": width,
+        "dtype": "float32",
+        "driver": "GTiff"
+    })
 
     polygons = [
         shape(geom)
@@ -168,95 +124,150 @@ def get_nan_mask_from_lidar(
         if value == 1
     ]
 
+    
     gdf = gpd.GeoDataFrame({"geometry": polygons}, crs=2154)
     gdf = gdf[gdf.geometry.area > min_area]
-    
-    final_mask = np.zeros(image.shape, dtype=bool)
-    for geometry in gdf.geometry:         
-        mask_geo = geometry_mask(
-        [mapping(geometry)], 
-        transform=transform_image, 
-        invert=False, 
-        out_shape=image.shape
+    if not gdf.empty:
+        final_mask = geometry_mask(
+            geometries=gdf.geometry,
+            transform=transform_image,
+            invert=True,
+            out_shape=image.shape
         )
-        final_mask = mask_geo | final_mask
+    else:
+        final_mask = np.zeros(image.shape, dtype=bool)
 
-    return image, final_mask, transform_image, tif_meta, gdf
+    return image, final_mask, transform_image, tif_meta
 
 
-def plot_masking_results(
-    plot_folder,
+
+
+def mask_lidar_tiles(
     bounds,
-    image_1,
-    masked_image_1,
-    transform_image_1,
-    gdf_1,
-    image_2,
-    masked_image_2,
-    transform_image_2,
-    gdf_2
+    vrt_path_t1,
+    vrt_path_t2,
+    output_lidar_path_t1,
+    output_lidar_path_t2,
+    min_area,
+    replace_zero_t1,
+    replace_zero_t2,
+    resolution_target,
+    no_data_t1,
+    no_data_t2,
 ):
-    """Plots and saves the results of the masking process."""
-    if not os.path.exists(plot_folder):
-        os.makedirs(plot_folder)
-
-    # Plot for image 1 before mask
-    fig, axes = plt.subplots(1, 1, figsize=(10, 10))
-    show(
-        image_1,
-        ax=axes,
-        transform=transform_image_1,
-        vmin=0,
-        cmap="Greens",
+    """Process a single tile and return the results"""
+    image_t1, valid_mask_t1, transform_t1, tif_meta_t1 = get_lidar_image_and_mask(
+        lidar_path=vrt_path_t1,
+        bounds=bounds,
+        replace_zero=replace_zero_t1,
+        min_area=min_area,
+        resolution_target=resolution_target,
+        no_data_value=no_data_t1,
     )
-    gdf_1.boundary.plot(ax=axes, edgecolor="red", linewidth=1)
-    path_image_1_before = plot_folder / f"plot_{int(bounds[0])}_{int(bounds[1])}_{int(bounds[2])}_{int(bounds[3])}_image_1_before.png"
-    fig.savefig(path_image_1_before, bbox_inches="tight", pad_inches=0)
-    plt.close()
+    if image_t1 is None:
+        logging.info(f"image_t1 is None : {bounds}")
+        return
 
-    # Plot for image 1 after mask
-    fig, axes = plt.subplots(1, 1, figsize=(10, 10))
-    show(
-        masked_image_1,
-        ax=axes,
-        transform=transform_image_1,
-        vmin=0,
-        cmap="Greens",
+    image_t2, valid_mask_t2, transform_t2, tif_meta_t2 = get_lidar_image_and_mask(
+        lidar_path=vrt_path_t2,
+        bounds=bounds,
+        replace_zero=replace_zero_t2,
+        min_area=min_area,
+        resolution_target=resolution_target,
+        no_data_value=no_data_t2,
     )
-    gdf_1.boundary.plot(ax=axes, edgecolor="red", linewidth=1)
-    gdf_2.boundary.plot(ax=axes, edgecolor="blue", linewidth=1)
-    path_image_1_after = plot_folder / f"plot_{int(bounds[0])}_{int(bounds[1])}_{int(bounds[2])}_{int(bounds[3])}_image_1_after.png"
-    fig.savefig(path_image_1_after, bbox_inches="tight", pad_inches=0)
-    plt.close()
+    if image_t2 is None:
+        logging.info(f"image_t2 is None : {bounds}")
+        return
 
-    # Plot for image 2 before mask
-    fig, axes = plt.subplots(1, 1, figsize=(10, 10))
-    vmax_2 = np.nanmean(masked_image_2) * 2 if not np.isnan(masked_image_2).all() else 0
-    show(
-        image_2,
-        ax=axes,
-        transform=transform_image_2,
-        vmin=0,
-        vmax=vmax_2,
-        cmap="Greens",
-    )
-    gdf_2.boundary.plot(ax=axes, edgecolor="blue", linewidth=1)
-    path_image_2_before = plot_folder / f"plot_{int(bounds[0])}_{int(bounds[1])}_{int(bounds[2])}_{int(bounds[3])}_image_2_before.png"
-    fig.savefig(path_image_2_before, bbox_inches="tight", pad_inches=0)
-    plt.close()
+    if transform_t1 != transform_t2:
+        logging.info(f"### transform 1 :{transform_t1},\n transform 2 {transform_t2}")
 
-    # Plot for image 2 after mask
-    fig, axes = plt.subplots(1, 1, figsize=(10, 10))
-    show(
-        masked_image_2,
-        ax=axes,
-        transform=transform_image_2,
-        vmin=0,
-        vmax=vmax_2,
-        cmap="Greens",
+    if image_t1.shape != image_t2.shape:
+        logging.info(f"Shape different : image 1 {image_t1.shape}, image 2 : {image_t2.shape}")
+
+
+    valid_mask = valid_mask_t1 & valid_mask_t2    
+
+    # Apply the mask to the TIFF data
+    masked_image_t1 = image_t1.copy()
+    masked_image_t2 = image_t2.copy()
+    masked_image_t1[~valid_mask] = np.nan  # Using NaN to indicate masked areas
+    masked_image_t2[~valid_mask] = np.nan  # Using NaN to indicate masked areas
+    
+    if np.isfinite(masked_image_t1).sum() == 0 or np.isfinite(masked_image_t2).sum() == 0:
+        logging.info(f"masked_image_t1 or masked_image_t2 is all nan : {bounds}")
+        return
+
+    # Delete the padding
+    masked_image_t1 = masked_image_t1[..., 1:-1, 1:-1]
+    masked_image_t2 = masked_image_t2[..., 1:-1, 1:-1]
+
+    # Save the masked output to a new TIFF file        
+    masked_image_t1_path = output_lidar_path_t1 / f"masked_{int(bounds[0])}_{int(bounds[1])}_{int(bounds[2])}_{int(bounds[3])}.tif"
+    with rasterio.open(masked_image_t1_path, "w", **tif_meta_t1) as dest:
+        dest.write(masked_image_t1.astype(np.float32), 1)
+    logging.info(f"Saved in {masked_image_t1_path}")
+
+    masked_image_t2_path = output_lidar_path_t2 / f"masked_{int(bounds[0])}_{int(bounds[1])}_{int(bounds[2])}_{int(bounds[3])}.tif"
+    with rasterio.open(masked_image_t2_path, "w", **tif_meta_t2) as dest:
+        dest.write(masked_image_t2.astype(np.float32), 1)
+    logging.info(f"Saved in {masked_image_t2_path}")
+        
+
+def check_valid_proportion(
+    idx, 
+    row, 
+    vrt_path, 
+    min_non_nan_proportion, 
+    min_non_zero_proportion
+):
+    """
+    Check if a single geometry has sufficient valid data proportion.
+    
+    Parameters:
+    - idx_row: Tuple of (index, row) from GeoDataFrame
+    - vrt_path: Path to the VRT file
+    - min_non_nan_proportion: Minimum proportion of non-nan data required
+    - min_non_zero_proportion: Minimum proportion of non-zero data required
+    
+    Returns:
+    - Tuple of (index, is_valid, valid_proportion)
+    """
+    geometry = row["geometry"]
+    
+    # Get bounds for this geometry
+    bounds = geometry.bounds  # (minx, miny, maxx, maxy)
+    
+    # Get data for this geometry using get_window
+    data, _ = get_window(
+        vrt_path,
+        bounds=bounds,
+        resolution=None,
+        resampling_method=None,
+        open_even_oob=False,
     )
-    gdf_1.boundary.plot(ax=axes, edgecolor="red", linewidth=1)
-    gdf_2.boundary.plot(ax=axes, edgecolor="blue", linewidth=1)
-    path_image_2_after = plot_folder / f"plot_{int(bounds[0])}_{int(bounds[1])}_{int(bounds[2])}_{int(bounds[3])}_image_2_after.png"
-    fig.savefig(path_image_2_after, bbox_inches="tight", pad_inches=0)
-    plt.close()
+
+    if data is None :
+        return idx, False
+    # Calculate valid data proportion
+    total_pixels = data.size
+    if total_pixels == 0:
+        return idx, False
+    
+    # Count valid pixels (not NaN and not nodata)
+    valid_non_nan_mask = np.isfinite(data)  
+    valid_non_zero_mask = data > 0
+
+    valid_non_nan_pixels = np.sum(valid_non_nan_mask)
+    valid_non_zero_pixels = np.sum(valid_non_zero_mask)
+    
+    valid_non_nan_proportion = valid_non_nan_pixels / total_pixels
+    valid_non_zero_proportion = valid_non_zero_pixels / total_pixels
+    
+    # Check if it meets the minimum threshold
+    is_valid_non_nan_proportion = valid_non_nan_proportion >= min_non_nan_proportion
+    is_valid_non_zero_proportion = valid_non_zero_proportion >= min_non_zero_proportion
+    
+    is_valid = is_valid_non_nan_proportion and is_valid_non_zero_proportion
+    return idx, is_valid

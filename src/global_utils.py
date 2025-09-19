@@ -81,7 +81,6 @@ def get_window(
 
         init_resolution = profile["transform"].a
         real_width, real_height = bounds[2] - bounds[0], bounds[3] - bounds[1]
-
         src_bounds = src.bounds
         bounds_within_vrt = (
             bounds[0] >= src_bounds.left and  
@@ -101,16 +100,16 @@ def get_window(
             
             # case support by rasterio
             if resampling_method in {"bilinear", "cubic", "cubic_spline", "lanczos", "nearest"} :
-                    window_height, window_width = int(real_height/resolution), int(real_width/resolution)
-                    resampling = getattr(Resampling, resampling_method)
+                window_height, window_width = real_height/resolution, real_width/resolution
+                resampling = getattr(Resampling, resampling_method)
             
             # case not support by rasterio
             else :
                 # We are going to start from the original image, and after loading the data, 
                 # we will multiply each pixel to create subpixels that can be grouped into blocks 
                 # to reach the target resolution.
-                window_height = int(np.ceil(real_height/init_resolution))
-                window_width = int(np.ceil(real_width/init_resolution))
+                window_height = real_height/init_resolution
+                window_width = real_width/init_resolution
                 resampling = Resampling.nearest 
             
             # Update transform to match the new resolution
@@ -129,14 +128,17 @@ def get_window(
         data = src.read(
             out_shape=(
                 src.count,
-                int(window_height),
-                int(window_width),
+                int(np.round(window_height)),
+                int(np.round(window_width)),
                 ),
             window=window,
             resampling=resampling,
             boundless=True,
             fill_value=np.nan
-            )
+            ).astype(np.float32)
+
+        if "nodata" in profile and profile["nodata"] is not None and not np.isnan(profile["nodata"]):
+            data[data == profile["nodata"]] = np.nan
 
         # come back of the case not supported by rasterio
         if resolution is not None and resolution != init_resolution and resampling_method not in {"bilinear", "cubic", "cubic_spline", "lanczos", "nearest"} :
@@ -144,20 +146,23 @@ def get_window(
             # we also assume that the real height is divisible by the resolution.
             # We compute the greatest common divisor (GCD) of the two resolutions.            
             common_divisor = gcd(int(resolution*10), int(init_resolution*10))/10 # we search the commum divisor in dm
-            mul_factor = int(init_resolution/common_divisor)
-            div_factor = int(resolution/common_divisor)
+            mul_factor = int(init_resolution/common_divisor) # factor to multiply the data to create subpixels
+            div_factor = int(resolution/common_divisor) # factor to divide the data to reach the target resolution
 
             # We repeat the data by the mul_factor to create subpixels 
             data = np.repeat(np.repeat(data, mul_factor, axis=-2), mul_factor, axis=-1)
 
             # we crop to be sure to have the good number of pixels 
-            tmp_height = int(real_height/common_divisor)
-            tmp_width = int(real_width/common_divisor)
+            tmp_height = int(round(real_height/resolution))*div_factor
+            tmp_width = int(round(real_width/resolution))*div_factor
             data = data[...,:tmp_height,:tmp_width]
             
+            if "nan" in resampling_method:
+                resampling_method = "nan" + resampling_method
+
             # We reduce in block pixel to reach the target resolution
-            data = block_reduce(data, block_size=(1, div_factor, div_factor), func=getattr(np, resampling_method))
-    
+            data = block_reduce(data, block_size=(1, div_factor, div_factor), cval=np.nan, func=getattr(np, resampling_method))
+
         count = data.shape[0] if len(data.shape) == 3 else 1
         height = data.shape[-2]
         width = data.shape[-1]
@@ -169,6 +174,7 @@ def get_window(
                 "height": height,
                 "width": width,
                 "count": count,
+                "nodata": np.nan,
             }
         )
     return data, profile

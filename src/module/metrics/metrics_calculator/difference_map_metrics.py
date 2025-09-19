@@ -22,6 +22,7 @@ class differenceMapMetrics :
         # Apply mask to target and prediction
         masked_target = target[mask]
         masked_pred = pred[mask]
+        
         if len(masked_pred) > 0 :
             # Compute error metrics
             error = masked_pred - masked_target

@@ -121,6 +121,7 @@ get_metrics_local :
 
 get_metrics_global :
   _target_ : src.postprocessing.metrics.get_metrics_global_utils.get_metrics_global
+  metrics_to_print : all
   metrics_set :
     mae_global :
       _target_ : src.postprocessing.metrics.get_metrics_global_utils.mean_global_computeur

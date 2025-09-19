@@ -10,7 +10,7 @@ from pathlib import Path
 geefetch.utils.gee.auth("ee-thomasboudras04")
 
 
-@hydra.main(version_base=None, config_path="../../configs/preprocessing/download", config_name="dwd_bbox_chantilly_timeseries")
+@hydra.main(version_base=None, config_path="../../../configs/preprocessing/download", config_name="dwd_bbox_chantilly_timeseries")
 @retry(exceptions=Exception, delay=10, tries=100)
 def main(cfg: DictConfig) -> None:
     for date in cfg.dates:

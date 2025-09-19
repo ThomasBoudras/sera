@@ -64,7 +64,7 @@ class UTAEMF(nn.Module):
                 - difference : Difference between the two skip connections.
                 - concat : Concatenation of the two skip connections.
         """
-        super(UTAES, self).__init__()
+        super(UTAEMF, self).__init__()
         self.n_stages = len(encoder_widths)
         self.encoder_widths = encoder_widths
         self.decoder_widths = decoder_widths

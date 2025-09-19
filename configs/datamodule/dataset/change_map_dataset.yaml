@@ -3,32 +3,16 @@ defaults :
   - get_targets : lidar
   - get_changes : calculator_difference
 
-gdf_path: ${data_dir}/sentinel/timeseries/lidarhd/gdf_change_map_clean.geojson
+gdf_path: ${data_dir}/sentinel/timeseries/diff_map/gdf_diff_map_timeseries.geojson
 resolution_input: 10
 resolution_target: 2.5
 patch_size_input: 32
 patch_size_target: 128
 
-get_inputs_t1:
-  <<: ${datamodule.dataset.get_inputs}
-  valid_column: valid_vrts_t1
-  date_column: lidar_acquisition_date_t1
-
-get_inputs_t2:
-  <<: ${datamodule.dataset.get_inputs}
-  valid_column: valid_vrts_t2
-  date_column: lidar_acquisition_date_t2
-
-get_targets_t1:
-  <<: ${datamodule.dataset.get_targets}
-  date_column: lidar_acquisition_date_t1
-  unit_column: lidar_unit_t1
-
-get_targets_t2:
-  <<: ${datamodule.dataset.get_targets}
-  date_column: lidar_acquisition_date_t2
-  unit_column: lidar_unit_t2
-
+get_inputs_t1: ${datamodule.dataset.get_inputs}
+get_inputs_t2: ${datamodule.dataset.get_inputs}
+get_targets_t1: ${datamodule.dataset.get_targets}
+get_targets_t2: ${datamodule.dataset.get_targets}
 
 train_dataset: 
   _target_: src.datamodule.dataset.change_map_dataset.changeMapDataset
