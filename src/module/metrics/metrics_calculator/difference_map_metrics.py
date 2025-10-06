@@ -55,9 +55,9 @@ class differenceMapMetrics :
             final_results["RMSE"] = torch.sqrt(states.sum_squared_error / states.nb_values).to(torch.float32)
 
             # Recall, Precision and F1 score
-            recall = (states.change_intersection / states.change_target_sum) if states.change_target_sum > 0 else torch.nan 
-            precision = (states.change_intersection / states.change_pred_sum) if states.change_pred_sum > 0 else torch.nan 
-            f1_score = (2 * states.change_intersection / (states.change_pred_sum + states.change_target_sum)) if states.change_pred_sum + states.change_target_sum > 0 else torch.nan
+            recall = (states.change_intersection / states.change_target_sum) if states.change_target_sum > 0 else torch.tensor(torch.nan) 
+            precision = (states.change_intersection / states.change_pred_sum) if states.change_pred_sum > 0 else torch.tensor(torch.nan) 
+            f1_score = (2 * states.change_intersection / (states.change_pred_sum + states.change_target_sum)) if states.change_pred_sum + states.change_target_sum > 0 else torch.tensor(torch.nan)
             
             final_results["recall"] = recall.to(torch.float32)
             final_results["precision"] = precision.to(torch.float32)
@@ -66,12 +66,12 @@ class differenceMapMetrics :
             final_results["nb_values"] = states.nb_values.to(torch.float32)
         else :
             # If no values, set all metrics to NaN
-            final_results["ME"] = torch.nan
-            final_results["MAE"] = torch.nan
-            final_results["RMSE"] = torch.nan
-            final_results["recall"] = torch.nan
-            final_results["precision"] = torch.nan
-            final_results["f1_score"] = torch.nan
-            final_results["nb_values"] = 0
+            final_results["ME"] = torch.tensor(torch.nan)
+            final_results["MAE"] = torch.tensor(torch.nan)
+            final_results["RMSE"] = torch.tensor(torch.nan)
+            final_results["recall"] = torch.tensor(torch.nan)
+            final_results["precision"] = torch.tensor(torch.nan)
+            final_results["f1_score"] = torch.tensor(torch.nan)
+            final_results["nb_values"] = torch.tensor(0)
         
         return final_results 

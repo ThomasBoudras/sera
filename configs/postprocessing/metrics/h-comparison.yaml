@@ -79,10 +79,10 @@ get_images :
 
     height_pred_open_canopy : 
       _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
-      path : /lustre/fsstor/projects/rech/ego/commun/fajwel/height_maps/open_canopy_france/<year>/full.vrt
+      path : /lustre/fsn1/projects/rech/ego/uof45xi/data/open_canopy/<year>/pred.vrt
       resolution: ${resolution}
       resampling_method: max
-      scaling_factor: 0.1
+      scaling_factor: 1
       min_image: ${min_height}
       max_image: ${max_height}
       open_even_oob: False

@@ -6,7 +6,7 @@ from tqdm import tqdm
 from joblib import Parallel, delayed
 from pathlib import Path
 
-@hydra.main(version_base=None, config_path="../../configs/preprocessing/datasets", config_name="get_clean_dataset")
+@hydra.main(version_base=None, config_path="../../../configs/preprocessing/datasets", config_name="get_clean_dataset")
 def main(cfg: DictConfig) -> None:    
     logging.info(OmegaConf.to_yaml(cfg, resolve=True))
     create_vrts = hydra.utils.get_method(cfg.create_vrts)
@@ -29,6 +29,9 @@ def main(cfg: DictConfig) -> None:
         delayed(get_valid_vrts)(data_dir, row["geometry"], row["grouping_dates"]) 
         for _, row in tqdm(initial_gdf.iterrows(), total=len(initial_gdf), desc=tqdm_desc)
     )
+    
+    # Remove the 'grouping_dates' column after it is no longer needed
+    initial_gdf = initial_gdf.drop(columns=["grouping_dates"])
     
     tqdm.pandas(desc="Delete bounds without data")
     logging.info("Filtering out rows with no valid vrt'.")

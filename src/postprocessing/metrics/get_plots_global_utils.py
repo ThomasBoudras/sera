@@ -121,6 +121,7 @@ class method_scatter_density:
         bins, 
         metrics_plot,
         max_points_on_scatter,
+        point_size,
     ):
         
         self.metric_name = metric_name
@@ -130,6 +131,7 @@ class method_scatter_density:
         self.bins = bins
         self.metrics_plot = metrics_plot
         self.max_points_on_scatter = max_points_on_scatter
+        self.point_size = point_size
 
     def __call__(self, metrics_global, ax):
         if self.metric_name not in metrics_global:
@@ -184,7 +186,7 @@ class method_scatter_density:
         fit_line = slope * np.array(self.range_fig) + intercept
         
         if self.max_points_on_scatter is not None:
-            idx = np.random.randint(len(x), size=self.max_points_on_scatter)
+            idx = np.random.choice(len(x), size=min(len(x), self.max_points_on_scatter), replace=False)
             x_scatter = x[idx]
             y_scatter = y[idx]
             z_scatter = z[idx]
@@ -197,7 +199,7 @@ class method_scatter_density:
             x_scatter,
             y_scatter,
             c=z_scatter,
-            s=1,
+            s=self.point_size,
             cmap="magma",
             norm=norm,
             edgecolor="none",

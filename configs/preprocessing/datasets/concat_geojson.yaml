@@ -1,6 +1,12 @@
+data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
+
 geojson_paths:
-  - ${data_dir}/utils/gdf_height_map_composites.geojson
-  - ${data_dir}/utils/gdf_height_map_composites_unsaved.geojson
+  - ${data_dir}/lidar/cleaned_lidar/gdf/gdf_diff_map_blois.geojson
+  - ${data_dir}/lidar/cleaned_lidar/gdf/gdf_diff_map_chantilly.geojson
+  - ${data_dir}/lidar/cleaned_lidar/gdf/gdf_diff_map_landes_v1.geojson
+  - ${data_dir}/lidar/cleaned_lidar/gdf/gdf_diff_map_landes_v2.geojson
+  - ${data_dir}/lidar/cleaned_lidar/gdf/gdf_diff_map_la_joue_la_fresse.geojson
+  - ${data_dir}/lidar/cleaned_lidar/gdf/gdf_diff_map_vosges.geojson
 output_path: ${data_dir}/utils/gdf_diff_map_initial.geojson
 
 train_proportion: 0.75

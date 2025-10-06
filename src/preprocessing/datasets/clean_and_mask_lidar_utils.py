@@ -142,7 +142,7 @@ def get_lidar_image_and_mask(
 
 
 
-def mask_lidar_tiles(
+def get_masked_lidar_tiles(
     bounds,
     vrt_path_t1,
     vrt_path_t2,
@@ -151,6 +151,8 @@ def mask_lidar_tiles(
     min_area,
     replace_zero_t1,
     replace_zero_t2,
+    lidar_unit_t1,
+    lidar_unit_t2,
     resolution_target,
     no_data_t1,
     no_data_t2,
@@ -202,6 +204,10 @@ def mask_lidar_tiles(
     # Delete the padding
     masked_image_t1 = masked_image_t1[..., 1:-1, 1:-1]
     masked_image_t2 = masked_image_t2[..., 1:-1, 1:-1]
+
+    scaling_factor = {"m": 1, "dm": 10, "cm": 100, "mm": 1000}
+    masked_image_t1 = masked_image_t1 / scaling_factor[lidar_unit_t1]
+    masked_image_t2 = masked_image_t2 / scaling_factor[lidar_unit_t2]
 
     # Save the masked output to a new TIFF file        
     masked_image_t1_path = output_lidar_path_t1 / f"masked_{int(bounds[0])}_{int(bounds[1])}_{int(bounds[2])}_{int(bounds[3])}.tif"

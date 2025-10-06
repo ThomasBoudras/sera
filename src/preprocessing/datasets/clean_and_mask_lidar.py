@@ -12,7 +12,7 @@ from joblib import Parallel, delayed
 import geopandas as gpd
 from shapely.geometry import box
 
-from src.preprocessing.datasets.clean_and_mask_lidar_utils import create_grid, check_valid_proportion, mask_lidar_tiles, create_vrt
+from src.preprocessing.datasets.clean_and_mask_lidar_utils import create_grid, check_valid_proportion, get_masked_lidar_tiles, create_vrt
 
 @hydra.main(version_base=None, config_path="../../../configs/preprocessing/datasets", config_name="clean_and_mask_lidar")
 def main(cfg: DictConfig) -> None:
@@ -61,8 +61,8 @@ def main(cfg: DictConfig) -> None:
         shutil.rmtree(output_lidar_path_t2)
     output_lidar_path_t2.mkdir(parents=True)
 
-    mask_lidar_tiles_partial = partial(
-        mask_lidar_tiles, 
+    get_masked_lidar_tiles_partial = partial(
+        get_masked_lidar_tiles, 
         vrt_path_t1=Path(vrt_path_t1), 
         vrt_path_t2=Path(vrt_path_t2), 
         output_lidar_path_t1=output_lidar_path_t1,
@@ -70,13 +70,15 @@ def main(cfg: DictConfig) -> None:
         min_area=cfg.min_area,
         replace_zero_t1=cfg.t1.replace_zero,
         replace_zero_t2=cfg.t2.replace_zero,
+        lidar_unit_t1=cfg.t1.lidar_unit,
+        lidar_unit_t2=cfg.t2.lidar_unit,
         resolution_target=cfg.resolution_target,
         no_data_t1=cfg.t1.no_data,
         no_data_t2=cfg.t2.no_data
         )
 
     Parallel(n_jobs=cfg.n_jobs)(
-        delayed(mask_lidar_tiles_partial)(bounds)
+        delayed(get_masked_lidar_tiles_partial)(bounds)
         for bounds in tqdm(list_bounds, desc="Processing mask on tiles")
     )
     logging.info(f"Masking finished")
@@ -156,8 +158,8 @@ def main(cfg: DictConfig) -> None:
                             'geometry': geometry, 
                             'lidar_acquisition_date_t1': lidar_acquisition_date, 
                             'lidar_acquisition_date_t2': cfg.t2.acquisition_date,
-                            'lidar_unit_t1': cfg.t1.lidar_unit,
-                            'lidar_unit_t2': cfg.t2.lidar_unit,
+                            'lidar_unit_t1': "m",
+                            'lidar_unit_t2': "m",
                         }
                     )
             else:
@@ -166,8 +168,8 @@ def main(cfg: DictConfig) -> None:
                         'geometry': geometry, 
                         'lidar_acquisition_date_t1': cfg.t1.acquisition_date, 
                         'lidar_acquisition_date_t2': lidar_acquisition_date,
-                        'lidar_unit_t1': cfg.t1.lidar_unit,
-                        'lidar_unit_t2': cfg.t2.lidar_unit,
+                        'lidar_unit_t1': "m",
+                        'lidar_unit_t2': "m",
                     }
                 )
                         
@@ -180,8 +182,8 @@ def main(cfg: DictConfig) -> None:
                 'geometry': geometries, 
                 'lidar_acquisition_date_t1': cfg.t1.acquisition_date, 
                 'lidar_acquisition_date_t2': cfg.t2.acquisition_date,
-                'lidar_unit_t1': cfg.t1.lidar_unit,
-                'lidar_unit_t2': cfg.t2.lidar_unit,
+                'lidar_unit_t1': "m",
+                'lidar_unit_t2': "m",
             }, 
             crs=2154
         )

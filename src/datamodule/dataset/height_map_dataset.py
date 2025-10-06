@@ -65,6 +65,13 @@ class heightMapDataset(Dataset):
         log.info(f"Number of {self.stage} samples : {len(gdf)}")
         return gdf
 
+    def update_moments_transforms(self, input_mean, input_std, transform_input):
+        self.transform_input = transform_input
+        
+        self.get_inputs.mean = input_mean
+        self.get_inputs.std = input_std
+        
+
     def custom_collate_fn(self, batch):
         inputs = [item[0] for item in batch]  
         targets = [item[1] for item in batch]  

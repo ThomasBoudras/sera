@@ -108,8 +108,8 @@ def get_window(
                 # We are going to start from the original image, and after loading the data, 
                 # we will multiply each pixel to create subpixels that can be grouped into blocks 
                 # to reach the target resolution.
-                window_height = real_height/init_resolution
-                window_width = real_width/init_resolution
+                window_height = np.ceil(real_height/init_resolution) #ceil to avoid rounding issues and get all needed pixels, crop is done later
+                window_width = np.ceil(real_width/init_resolution) #ceil to avoid rounding issues and get all needed pixels, crop is done later
                 resampling = Resampling.nearest 
             
             # Update transform to match the new resolution
@@ -136,7 +136,7 @@ def get_window(
             boundless=True,
             fill_value=np.nan
             ).astype(np.float32)
-
+            
         if "nodata" in profile and profile["nodata"] is not None and not np.isnan(profile["nodata"]):
             data[data == profile["nodata"]] = np.nan
 
@@ -155,7 +155,7 @@ def get_window(
             # we crop to be sure to have the good number of pixels 
             tmp_height = int(round(real_height/resolution))*div_factor
             tmp_width = int(round(real_width/resolution))*div_factor
-            data = data[...,:tmp_height,:tmp_width]
+            data = data[...,:tmp_height,:tmp_width] 
             
             if "nan" in resampling_method:
                 resampling_method = "nan" + resampling_method
@@ -175,6 +175,7 @@ def get_window(
                 "width": width,
                 "count": count,
                 "nodata": np.nan,
+                "dtype": data.dtype,
             }
         )
     return data, profile

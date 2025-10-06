@@ -18,9 +18,8 @@ train_dataset:
   _target_: src.datamodule.dataset.change_map_dataset.changeMapDataset
   resolution_input: ${datamodule.dataset.resolution_input}  
   resolution_target: ${datamodule.dataset.resolution_target}
-  patch_size_input: ${datamodule.instance.patch_size_input}
-  patch_size_target: ${datamodule.instance.patch_size_target}
-  prediction_mode : False
+  patch_size_input: ${datamodule.dataset.patch_size_input}
+  patch_size_target: ${datamodule.dataset.patch_size_target}
   gdf_path: ${datamodule.dataset.gdf_path}
   data_augmentation : True
   get_inputs_t1 :  ${datamodule.dataset.get_inputs_t1}
@@ -34,9 +33,8 @@ val_dataset:
   _target_: src.datamodule.dataset.change_map_dataset.changeMapDataset
   resolution_input: ${datamodule.dataset.resolution_input}  
   resolution_target: ${datamodule.dataset.resolution_target}
-  patch_size_input: ${datamodule.instance.patch_size_input}
-  patch_size_target: ${datamodule.instance.patch_size_target}
-  prediction_mode : False
+  patch_size_input: ${datamodule.dataset.patch_size_input}
+  patch_size_target: ${datamodule.dataset.patch_size_target}
   gdf_path: ${datamodule.dataset.gdf_path}
   data_augmentation : False
   get_inputs_t1 :  ${datamodule.dataset.get_inputs_t1}
@@ -50,9 +48,8 @@ test_dataset:
   _target_: src.datamodule.dataset.change_map_dataset.changeMapDataset
   resolution_input: ${datamodule.dataset.resolution_input}  
   resolution_target: ${datamodule.dataset.resolution_target}
-  patch_size_input: ${datamodule.instance.patch_size_input}
-  patch_size_target: ${datamodule.instance.patch_size_target}
-  prediction_mode : False
+  patch_size_input: ${datamodule.dataset.patch_size_input}
+  patch_size_target: ${datamodule.dataset.patch_size_target}
   gdf_path: ${datamodule.dataset.gdf_path}
   data_augmentation : False
   get_inputs_t1 :  ${datamodule.dataset.get_inputs_t1}
@@ -66,9 +63,8 @@ predict_dataset :
   _target_: src.datamodule.dataset.change_map_dataset.changeMapDataset
   resolution_input: ${datamodule.dataset.resolution_input}  
   resolution_target: ${datamodule.dataset.resolution_target}
-  patch_size_input: ${datamodule.instance.patch_size_input}
-  patch_size_target: ${datamodule.instance.patch_size_target}
-  prediction_mode : True
+  patch_size_input: ${datamodule.dataset.patch_size_input}
+  patch_size_target: ${datamodule.dataset.patch_size_target}
   gdf_path: ${datamodule.dataset.gdf_path}
   data_augmentation : False
   get_inputs_t1 : ${datamodule.dataset.get_inputs_t1}

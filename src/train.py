@@ -60,9 +60,9 @@ def train(config: DictConfig) :
             else:
                 missing_keys, unexpected_keys = module.load_state_dict(checkpoint, strict=False)
             
-                log.warning(f"Missing keys in checkpoint: {missing_keys}")
-                log.warning(f"Unexpected keys in checkpoint: {unexpected_keys}")
-            
+            log.info(f"Missing keys in checkpoint: {missing_keys}")
+            log.info(f"Unexpected keys in checkpoint: {unexpected_keys}")
+
             ckpt_path = None
         
         else :

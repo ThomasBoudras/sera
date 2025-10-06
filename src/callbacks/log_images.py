@@ -43,28 +43,31 @@ class LogImages(Callback):
         experiment = logger.experiment
         self.device = pl_module.device
 
-        # get a batch from the dataset
-        samples = [dataset[i] for i in range(self.num_samples)]
-        inputs, targets, meta_data = zip(*samples)
-        inputs = torch.stack(inputs).to(device=pl_module.device)
-        targets = torch.stack(targets).to(device=pl_module.device)
-        meta_data =  {key: torch.stack([d[key] for d in meta_data], dim=0) for key in meta_data[0]}
-
-        preds = pl_module(inputs, meta_data).to(device=pl_module.device)
-
+        inputs_images = []
         target_images = []
         pred_images = []
-        for i, pred in enumerate(preds):
-            pred_image = pred
-            target_image = targets[i]
 
-            pred_image, target_image = self.prepare_images(pred_image, target_image)
+        for i in range(self.num_samples):
+            # Get the i-th sample from the dataset
+            input_i, target_i, meta_data_i = dataset[i]
 
+            # Convert input and target to tensors and move to the correct device
+            input_tensor = torch.tensor(input_i).to(device=pl_module.device)
+            target_tensor = torch.tensor(target_i).to(device=pl_module.device)
+            meta_data_i = {key : meta_data_i[key].unsqueeze(0) for key in meta_data_i}
+
+            # Get prediction for this sample
+            pred_tensor = pl_module(input_tensor.unsqueeze(0), meta_data_i).squeeze(0).to(device=pl_module.device)
+
+            # Prepare images for logging
+            pred_image, target_image = self.prepare_images(pred_tensor, target_tensor)
+
+            inputs_images.append(input_tensor)
             target_images.append(target_image)
             pred_images.append(pred_image)
         
         # log input images
-        self.log_inputs(inputs, experiment, stage)
+        self.log_inputs(inputs_images, experiment, stage)
 
         # log target and predicted images
         curr_epoch = int(trainer.current_epoch)

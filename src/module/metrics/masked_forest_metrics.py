@@ -19,7 +19,7 @@ class maskedForestMetrics(Metric):
         super().__init__()
         self.metrics_calculator = metrics_calculator
         self.forest_mask_gdf = gpd.read_parquet(forest_mask_path) if forest_mask_path is not None else None
-        self.classification_path = Path(classification_path).resolve()
+        self.classification_path = Path(classification_path).resolve() if classification_path is not None else None
         self.classes_to_keep = classes_to_keep
         self.resolution_target = resolution_target
 

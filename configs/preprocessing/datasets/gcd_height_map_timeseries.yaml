@@ -1,9 +1,5 @@
 root_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data/
 data_dir: ${root_dir}/sentinel/timeseries/lidarhd
-hydra:
-  run :
-    dir : ${data_dir}/logs
-  output_subdir : hydra_logs
 
 create_vrts: src.preprocessing.datasets.get_clean_dataset_utils.create_vrts_timeseries
 get_valid_vrts: src.preprocessing.datasets.get_clean_dataset_utils.get_valid_vrts_timeseries

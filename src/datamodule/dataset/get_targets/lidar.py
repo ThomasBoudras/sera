@@ -29,7 +29,7 @@ class getLidarImages :
         lidar_date = row[self.date_column]
         unit = row[self.unit_column]
 
-        lidar_vrt  = self.targets_path / f"{lidar_date[:4]}/lidar.vrt"
+        lidar_vrt  = self.targets_path / f"{lidar_date[:4]}" / "lidar.vrt"
 
         targets, _ = get_window(
             image_path=lidar_vrt,

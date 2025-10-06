@@ -11,20 +11,21 @@ class MaskedNormalisedHuber(nn.Module):
         self.min_value = min_value
 
     def forward(self, pred, target):
-        mask = ~torch.isnan(target)  # create a mask where target is not NaN
+        nan_mask = ~torch.isnan(target)  # create a mask where target is not NaN
         
         # Normalize values based on sign
-        pred_masked = pred[mask]
-        target_masked = target[mask]
-        
-        # For negative values, normalize by 50
-        negative_mask = target_masked < 0
-        pred_masked[negative_mask] = pred_masked[negative_mask] / self.max_value
-        target_masked[negative_mask] = target_masked[negative_mask] / self.max_value
-        
-        # For positive values, normalize by 5
-        positive_mask = target_masked >= 0
-        pred_masked[positive_mask] = pred_masked[positive_mask] / self.min_value
-        target_masked[positive_mask] = target_masked[positive_mask] / self.min_value
+        pred_masked = pred[nan_mask]
+        target_masked = target[nan_mask]
+
+        positive_pred_mask = pred_masked >= 0
+        positive_target_mask = target_masked >= 0
+
+        pred_masked[positive_pred_mask] = pred_masked[positive_pred_mask] / self.max_value
+        target_masked[positive_target_mask] = target_masked[positive_target_mask] / self.max_value
+
+        pred_masked[~positive_pred_mask] = pred_masked[~positive_pred_mask] / -self.min_value
+        target_masked[~positive_target_mask] = target_masked[~positive_target_mask] / -self.min_value
+
+
         
         return F.smooth_l1_loss(pred_masked, target_masked, reduction=self.reduction, beta=self.beta)

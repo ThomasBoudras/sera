@@ -62,18 +62,18 @@ class heightMapMetrics :
             final_results["nMAE"] = (states.sum_relative_error / states.nb_values_min_height).to(torch.float32)
 
             # TreeCov - Treecover IoU
-            final_results["TreeCov"] = (states.intersection / states.union).to(torch.float32) if states.union > 0 else torch.nan
+            final_results["TreeCov"] = (states.intersection / states.union).to(torch.float32) if states.union > 0 else torch.tensor(torch.nan)
 
             #nb_values - Number of values
             final_results["nb_values"] = states.nb_values.to(torch.float32)
         else :
             # If no values, set all metrics to NaN
-            final_results["ME"] = torch.nan
-            final_results["MAE"] = torch.nan
-            final_results["RMSE"] = torch.nan
-            final_results["nMAE"] = torch.nan
-            final_results["TreeCov"] = torch.nan
-            final_results["nb_values"] = 0
+            final_results["ME"] = torch.tensor(torch.nan)
+            final_results["MAE"] = torch.tensor(torch.nan)
+            final_results["RMSE"] = torch.tensor(torch.nan)
+            final_results["nMAE"] = torch.tensor(torch.nan)
+            final_results["TreeCov"] = torch.tensor(torch.nan)
+            final_results["nb_values"] = torch.tensor(0)
         
         return final_results
 

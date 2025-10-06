@@ -1,0 +1,66 @@
+# @package _global_
+defaults:
+    - override /module/loss: masked_normalised_huber
+    - override /module/regression_model: utae_mf
+    - override /module/metrics/metrics_calculator: difference_map_metrics
+    - override /datamodule/dataset : change_map_dataset
+
+project: "train_sera"
+run_name: d-sera_d
+run_version: v1_${run_name}
+data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
+ckpt_path : ${data_dir}/logs/train_sera/h-sera_h_max/v1_h-sera_h_max/best_checkpoints/epoch_031.ckpt
+load_just_weights: True
+
+module:
+    scheduler:
+        patience: 10
+        threshold: 0.003
+    metrics:
+        forest_mask_path: null
+        classification_path: null
+
+datamodule:
+    instance:
+        batch_size: 1
+        num_workers: 8
+    dataset:
+        patch_size_input: 64
+        patch_size_target: 256
+        get_inputs_t1:
+            inputs_path: ${data_dir}/sentinel/timeseries/diff_map/
+            vrts_column: valid_vrts_t1
+            date_column: lidar_acquisition_date_t1
+        get_inputs_t2:
+            inputs_path: ${data_dir}/sentinel/timeseries/diff_map/
+            vrts_column: valid_vrts_t2
+            date_column: lidar_acquisition_date_t2
+        get_targets_t1:
+            targets_path: ${data_dir}/lidar/
+            date_column: lidar_acquisition_date_t1
+            unit_column: lidar_unit_t1
+            replace_nan_by_zero_in_target: False
+        get_targets_t2:
+            targets_path: ${data_dir}/lidar/
+            date_column: lidar_acquisition_date_t2
+            unit_column: lidar_unit_t2
+            replace_nan_by_zero_in_target: False
+
+
+callbacks:
+    early_stopping:
+        min_delta: 0.003
+        patience: 20
+    log_image_predictions: 
+        prepare_images:
+            _target_: src.callbacks.log_images_utils.difference_map_mode
+            min_value_normalization: -50
+            max_value_normalization: 5
+            colormap: "RdYlGn"
+        log_inputs: 
+            _target_: src.callbacks.log_images_utils.log_5d_s1_s2_images_revisit
+            max_nb_timeseries_input: 5
+
+trainer:
+    devices: auto   
+    strategy: auto

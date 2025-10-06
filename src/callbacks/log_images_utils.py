@@ -45,6 +45,7 @@ class height_map_mode:
         return pred_image, target_image
     
     def _normalize_pred_and_target(self, pred_tensor, target_tensor):
+        print(f"\n normalize target_tensor type: {type(target_tensor)}")
         normalized_pred = (pred_tensor - self.min_value_normalization) / (self.max_value_normalization - self.min_value_normalization)
         normalized_target = (target_tensor - self.min_value_normalization) / (self.max_value_normalization - self.min_value_normalization)
         # Clamp to ensure values are between 0 and 1
@@ -53,12 +54,12 @@ class height_map_mode:
         return normalized_pred, normalized_target
 
     def _color_transform(self, tensor):
-        magma = cm.get_cmap(self.colormap)
+        colormap = cm.get_cmap(self.colormap)
         if tensor.dim() == 3 and tensor.shape[0] == 1:
             tensor_np = tensor.squeeze(0).cpu().numpy()
         else:
             tensor_np = tensor.cpu().numpy()
-        colored = magma(tensor_np)  # (H, W, 4)
+        colored = colormap(tensor_np)  # (H, W, 4)
         colored = colored[..., :3]  # remove alpha
         colored = torch.from_numpy(colored).permute(2, 0, 1).float().to(device=tensor.device)
         return colored
@@ -86,22 +87,27 @@ class difference_map_mode:
     def _normalize_pred_and_target(self, pred_tensor, target_tensor):
         # For difference maps, we use TwoSlopeNorm for centered normalization
         norm = mcolors.TwoSlopeNorm(vmin=self.min_value_normalization, vcenter=0, vmax=self.max_value_normalization)
+        
         # Convert to numpy for normalization
         pred_np = pred_tensor.cpu().numpy()
         target_np = target_tensor.cpu().numpy()
+        
         # Apply normalization
-        normalized_pred = norm(pred_np)
-        normalized_target = norm(target_np)
+        normalized_pred = torch.from_numpy(norm(pred_np))
+        normalized_target = torch.from_numpy(norm(target_np))
+        
         return normalized_pred, normalized_target
 
     def _color_transform(self, tensor):
         colormap = cm.get_cmap(self.colormap)
-        # Apply colormap
-        colored = colormap(tensor)  # (H, W, 4)
+        if tensor.dim() == 3 and tensor.shape[0] == 1:
+            tensor_np = tensor.squeeze(0).cpu().numpy()
+        else:
+            tensor_np = tensor.cpu().numpy()
+        colored = colormap(tensor_np)  # (H, W, 4)
         colored = colored[..., :3]  # remove alpha
-        # Convert back to tensor
-        colored_tensor = torch.from_numpy(colored).permute(2, 0, 1).float()
-        return colored_tensor
+        colored = torch.from_numpy(colored).permute(2, 0, 1).float().to(device=tensor.device)
+        return colored
 
 class change_map_mode:
     """
@@ -124,6 +130,7 @@ class log_4d_s1_s2_images:
         None
     """
     def __call__(self, inputs, experiment, stage):
+        input_images = torch.stack(inputs, dim=0)
         input_images = inputs[:, [2, 1, 0], :, :]  # Convert BGR to RGB
         input_images = make_grid(input_images, normalize=True)
         # Log image to tensorboard
@@ -140,7 +147,8 @@ class log_5d_s1_s2_images:
         self.max_nb_timeseries_input = max_nb_timeseries_input
 
     def __call__(self, inputs, experiment, stage):
-        input_images = inputs[:, :, [2, 1, 0], :, :]  # Convert BGR to RGB
+        input_images = torch.stack(inputs, dim=0)
+        input_images = input_images[:, :, [2, 1, 0], :, :]  # Convert BGR to RGB
         median_inputs = input_images.median(dim=1).values
         median_inputs = make_grid(median_inputs, normalize=True)
         experiment.add_image(f"input_images/{stage}/median", median_inputs, global_step=0)  # As the input are the same each epoch, we dont specify the epoch
@@ -159,9 +167,10 @@ class log_5d_s1_s2_images_revisit(log_5d_s1_s2_images):
         None
     """
     def __call__(self, inputs, experiment, stage):
-        input_separator = inputs.shape[1] // 2
-        input_images_t1 = inputs[:, :input_separator, :, :, :].copy()
-        input_images_t2 = inputs[:, input_separator:, :, :, :].copy()
+        input_separator = inputs[0].shape[0] // 2
+        input_images_t1 = [input_i[:input_separator, :, :, :].contiguous() for input_i in inputs]
+        input_images_t2 = [input_i[input_separator:, :, :, :].contiguous() for input_i in inputs]
+        
         super().__call__(input_images_t1, experiment, f"{stage}_t1")
         super().__call__(input_images_t2, experiment, f"{stage}_t2")
 
@@ -174,6 +183,7 @@ class log_4d_spot_images:
         None
     """
     def __call__(self, inputs, experiment, stage):
+        inputs = torch.stack(inputs, dim=0)
         input_images = inputs[:, :3, :, :]  # Keep just RGB 
         input_images = make_grid(input_images, normalize=True)
         experiment.add_image(f"input_images/{stage}", input_images, global_step=0)  # As the input are the same each epoch, we dont specify the epoch

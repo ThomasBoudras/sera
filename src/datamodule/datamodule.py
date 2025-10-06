@@ -40,9 +40,13 @@ class Datamodule(L.LightningDataModule):
             # Instantiate a temporary dataset for calculation
             temp_train_dataset = self.hparams.train_dataset
             
-            def get_mean_std(x, axis):
+            def get_mean_std(sample, axis):
+                x, y , meta_data = sample
+                x = x.squeeze().to(torch.float32)  
                 if len(x.shape) == 4:
                     x = x[0]
+                if "inputs_seperation" in meta_data:
+                    x = x[:meta_data["inputs_seperation"], ...] 
                 x[~torch.isfinite(x)] = 0
                 return x.mean(axis=axis), x.std(axis=axis)
 
@@ -54,7 +58,7 @@ class Datamodule(L.LightningDataModule):
 
             mean_per_image, std_per_image = zip(
                 *[
-                    get_mean_std(temp_train_dataset[ix][0].squeeze().to(torch.float32), axis=(1, 2))
+                    get_mean_std(temp_train_dataset[ix], axis=(1, 2))
                     for ix in tqdm(sampled_indices, desc="Computing mean and std of inputs")
                 ]
             )
@@ -82,21 +86,13 @@ class Datamodule(L.LightningDataModule):
         self.predict_dataset = self.hparams.predict_dataset
         
         if self.train_dataset is not None :
-            self.train_dataset.transform_input = transform_input
-            self.train_dataset.get_inputs.mean = self.input_mean
-            self.train_dataset.get_inputs.std = self.input_std
+            self.train_dataset.update_moments_transforms(self.input_mean, self.input_std, transform_input)
         if self.val_dataset is not None :
-            self.val_dataset.transform_input = transform_input
-            self.val_dataset.get_inputs.mean = self.input_mean
-            self.val_dataset.get_inputs.std = self.input_std
+            self.val_dataset.update_moments_transforms(self.input_mean, self.input_std, transform_input)
         if self.test_dataset is not None :
-            self.test_dataset.transform_input = transform_input
-            self.test_dataset.get_inputs.mean = self.input_mean
-            self.test_dataset.get_inputs.std = self.input_std
+            self.test_dataset.update_moments_transforms(self.input_mean, self.input_std, transform_input)
         if self.predict_dataset is not None :
-            self.predict_dataset.transform_input = transform_input
-            self.predict_dataset.get_inputs.mean = self.input_mean
-            self.predict_dataset.get_inputs.std = self.input_std
+            self.predict_dataset.update_moments_transforms(self.input_mean, self.input_std, transform_input)
         
 
     def train_dataloader(self):

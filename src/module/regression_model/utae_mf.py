@@ -106,7 +106,7 @@ class UTAEMF(nn.Module):
             for i in range(self.n_stages - 1)
         )
         coupling_factor = 1 if self.coupling_mode == "difference" else 2
-        self.up_blocks_samiese = nn.ModuleList(
+        self.up_blocks_mf = nn.ModuleList(
             UpConvBlockMF(
                 d_in=decoder_widths[i]*coupling_factor,
                 d_out=decoder_widths[i - 1]*coupling_factor,
@@ -131,7 +131,7 @@ class UTAEMF(nn.Module):
         self.temporal_aggregator = Temporal_Aggregator(mode=agg_mode)
         out_conv_nkernels= [decoder_widths[0]*coupling_factor] + out_conv
         out_conv_nkernels[:-1] *= coupling_factor
-        self.out_conv_samiese = ConvBlock(nkernels=out_conv_nkernels, padding_mode=padding_mode, last_relu=self.last_relue)
+        self.out_conv_mf = ConvBlock(nkernels=out_conv_nkernels, padding_mode=padding_mode, last_relu=self.last_relue)
 
     def forward_encoder(self, input, batch_positions):
         pad_mask = (
@@ -152,11 +152,11 @@ class UTAEMF(nn.Module):
     def forward(self, input, meta_data=None, return_att=False):
         batch_positions_t1 = meta_data["inputs_dates_t1"]
         batch_positions_t2 = meta_data["inputs_dates_t2"]
-        input_separation = input.shape[1]//2
-
-        input_t1 = input[:, :input_separation,:, :, :].contiguous()
-        input_t2 = input[:, input_separation:, :, :, :].contiguous()
+        inputs_seperation = meta_data["inputs_seperation"][0]
         
+        input_t1 = input[:,:inputs_seperation, ...].contiguous()
+        input_t2 = input[:,inputs_seperation:, ...].contiguous()
+
         # SPATIAL and TEMPORAL ENCODER
         out_t1, att_t1, feature_maps_t1, pad_mask_t1 = self.forward_encoder(input_t1, batch_positions_t1)
         out_t2, att_t2, feature_maps_t2, pad_mask_t2 = self.forward_encoder(input_t2, batch_positions_t2)
@@ -175,7 +175,7 @@ class UTAEMF(nn.Module):
             skip_t2 = self.temporal_aggregator(
                 feature_maps_t2[-(i + 2)], pad_mask=pad_mask_t2, attn_mask=att_t2
             )
-            out = self.up_blocks_samiese[i](input=out, skip_t1=skip_t1, skip_t2=skip_t2)
-        out = self.out_conv_samiese(out)
+            out = self.up_blocks_mf[i](input=out, skip_t1=skip_t1, skip_t2=skip_t2)
+        out = self.out_conv_mf(out)
         return out
 

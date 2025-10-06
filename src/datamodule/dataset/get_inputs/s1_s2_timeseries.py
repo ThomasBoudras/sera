@@ -155,7 +155,7 @@ class getS1S2Timeseries :
             image_added = inputs[idx] 
             date_added = inputs_dates[idx]
 
-            if self.duplication_level_noise is not None: 
+            if self.duplication_level_noise is not None and self.std is not None: 
                 noise = np.random.normal(
                     0,
                     self.duplication_level_noise * self.std,

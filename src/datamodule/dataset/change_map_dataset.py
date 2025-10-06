@@ -55,20 +55,32 @@ class changeMapDataset(Dataset):
         
         gdf = self.get_inputs_t1.prepare_gdf_for_inputs(gdf)
         gdf = self.get_inputs_t2.prepare_gdf_for_inputs(gdf)
-        log.info(f"Number of {self.stage} samples after filtering : {len(gdf)}")
 
         if self.stage == "predict" :
-            # In prediction mode, we want to predict the entire geometry,
-            # while respecting the patch size we can give the model, 
-            # so we recover all the subpatches in the bounds. To each 
-            # sub-patch we add a margin on its edges for the edge effect.
+            # In prediction mode, we want to generate predictions over the entire geometry,
+            # while respecting the maximum patch size the model can process.
+            # Therefore, we split each geometry into sub-patches, adding a margin to each
+            # sub-patch to reduce edge effects during prediction.
 
-            margin_size = int(np.ceil(self.patch_size_real/12)) 
-            # As we apply 3 margins, with a margin length of 1/6 of 
-            # the patch size, we have a complete overlap of each patch. 
-            # By convention, we take a margin 2 times smaller.
-            
+            margin_size = int(self.patch_size_real / 12)
+            # If we used a margin of 1/6 of the patch size, the patches would completely overlap,
+            # which is a bit excessive. Instead, by convention, we use a margin of 1/12 of the patch size
+            # to provide some overlap for edge effects, but not a full overlap.
             gdf = expand_gdf(gdf, patch_size=self.patch_size_real, margin_size=margin_size, resolution=self.resolution_input)
+        
+        log.info(f"Number of {self.stage} samples : {len(gdf)}")
+        return gdf
+
+    def update_moments_transforms(self, input_mean, input_std, transform_input):
+        self.transform_input = transform_input
+
+        self.get_inputs_t1.mean = input_mean
+        self.get_inputs_t1.std = input_std
+
+        self.get_inputs_t2.mean = input_mean
+        self.get_inputs_t2.std = input_std
+
+
 
     def custom_collate_fn(self, batch):
         inputs = [item[0] for item in batch]  
@@ -104,12 +116,13 @@ class changeMapDataset(Dataset):
         inputs_t2, metadata_inputs_t2 =self.get_inputs_t2(bounds, row_gdf, self.transform_input)
         targets_t2, metadata_targets_t2 = self.get_targets_t2(bounds, row_gdf, self.transform_target)
         
+        inputs_seperation = inputs_t1.shape[0]
         inputs = torch.cat([inputs_t1, inputs_t2], dim = 0)
         #To simplify the code, we create a single input tensor by concatenating the inputs 
         # for the two dates. To separate the two, we'll cut this single tensor in the middle
 
         targets = self.get_changes(targets_t1, targets_t2)
-       
+        
         if rotation > 0 :
             inputs = torch.rot90(inputs, k=rotation, dims=(-1, -2))
             targets = torch.rot90(targets, k=rotation, dims=(-1, -2))
@@ -130,6 +143,7 @@ class changeMapDataset(Dataset):
             meta_data[key + "_t2"] = value
 
         meta_data["bounds"] = torch.tensor(bounds)
-        
+        meta_data["inputs_seperation"] = torch.tensor(inputs_seperation)
+
         return inputs, targets, meta_data
     
