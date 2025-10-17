@@ -18,6 +18,7 @@ class EDSR(nn.Module):
             res_scale,
             pretrained_model_path,
             input_type,
+            freeze_model,
         ):
         super(EDSR, self).__init__()
         self.forward_method = self.forward_timeseries if input_type == "TIMESERIES" else self.forward_composites
@@ -52,6 +53,17 @@ class EDSR(nn.Module):
         
         if self.pretrained_model_path is not None :
             self.load_partial_weight()
+
+        if freeze_model:
+            self.freeze_model()
+
+    def freeze_model(self):
+        for param in self.head.parameters():
+            param.requires_grad = False
+        for param in self.body.parameters():
+            param.requires_grad = False
+        for param in self.tail.parameters():
+            param.requires_grad = False
 
     def load_partial_weight(self) :
         log.info(f"Using the pre-trained model {self.pretrained_model_path.name} to initialise the model")

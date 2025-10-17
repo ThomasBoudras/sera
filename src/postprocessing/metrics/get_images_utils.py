@@ -250,8 +250,8 @@ class change_treecover_computer :
         profile = res_profiles[self.profile_name]
 
         nan_mask = np.isnan(image_1) | np.isnan(image_2)
-        binary_map_1 = image_1 > self.threshold
-        binary_map_2 = image_2 > self.threshold
+        binary_map_1 = image_1 >= self.threshold
+        binary_map_2 = image_2 >= self.threshold
         changes = np.logical_and(binary_map_1, ~binary_map_2)
 
         return apply_min_area(changes=changes, profile=profile, min_area=self.min_area, nan_mask=nan_mask)

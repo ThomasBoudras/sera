@@ -28,6 +28,7 @@ class UTAEMF(nn.Module):
         padding_mode,
         last_relue,
         coupling_mode, 
+        freeze_encoder,
     ):
         """
         U-TAE middle fusion architecture for spatio-temporal encoding of satellite image time series.
@@ -63,6 +64,7 @@ class UTAEMF(nn.Module):
             coupling_mode (str): Coupling mode for the middle fusion. Can either be:
                 - difference : Difference between the two skip connections.
                 - concat : Concatenation of the two skip connections.
+            freeze_encoder (bool): Whether to freeze the encoder.
         """
         super(UTAEMF, self).__init__()
         self.n_stages = len(encoder_widths)
@@ -132,6 +134,19 @@ class UTAEMF(nn.Module):
         out_conv_nkernels= [decoder_widths[0]*coupling_factor] + out_conv
         out_conv_nkernels[:-1] *= coupling_factor
         self.out_conv_mf = ConvBlock(nkernels=out_conv_nkernels, padding_mode=padding_mode, last_relu=self.last_relue)
+
+        if freeze_encoder:
+            self.freeze_encoder()
+
+    def freeze_encoder(self):
+        for param in self.in_conv.parameters():
+            param.requires_grad = False
+        for param in self.down_blocks.parameters():
+            param.requires_grad = False
+        for param in self.temporal_encoder.parameters():
+            param.requires_grad = False
+        for param in self.temporal_aggregator.parameters():
+            param.requires_grad = False
 
     def forward_encoder(self, input, batch_positions):
         pad_mask = (

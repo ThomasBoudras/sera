@@ -52,8 +52,8 @@ class LogImages(Callback):
             input_i, target_i, meta_data_i = dataset[i]
 
             # Convert input and target to tensors and move to the correct device
-            input_tensor = torch.tensor(input_i).to(device=pl_module.device)
-            target_tensor = torch.tensor(target_i).to(device=pl_module.device)
+            input_tensor = input_i.to(device=pl_module.device)
+            target_tensor = target_i.to(device=pl_module.device)
             meta_data_i = {key : meta_data_i[key].unsqueeze(0) for key in meta_data_i}
 
             # Get prediction for this sample

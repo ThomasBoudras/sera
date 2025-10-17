@@ -15,3 +15,4 @@ pad_value: 0
 padding_mode: "reflect"
 last_relue: False
 coupling_mode: concat
+freeze_encoder: False

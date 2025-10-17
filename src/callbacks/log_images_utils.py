@@ -45,7 +45,6 @@ class height_map_mode:
         return pred_image, target_image
     
     def _normalize_pred_and_target(self, pred_tensor, target_tensor):
-        print(f"\n normalize target_tensor type: {type(target_tensor)}")
         normalized_pred = (pred_tensor - self.min_value_normalization) / (self.max_value_normalization - self.min_value_normalization)
         normalized_target = (target_tensor - self.min_value_normalization) / (self.max_value_normalization - self.min_value_normalization)
         # Clamp to ensure values are between 0 and 1
@@ -131,7 +130,7 @@ class log_4d_s1_s2_images:
     """
     def __call__(self, inputs, experiment, stage):
         input_images = torch.stack(inputs, dim=0)
-        input_images = inputs[:, [2, 1, 0], :, :]  # Convert BGR to RGB
+        input_images = input_images[:, [2, 1, 0], :, :]  # Convert BGR to RGB
         input_images = make_grid(input_images, normalize=True)
         # Log image to tensorboard
         experiment.add_image(f"input_images/{stage}", input_images, global_step=0)
@@ -183,7 +182,7 @@ class log_4d_spot_images:
         None
     """
     def __call__(self, inputs, experiment, stage):
-        inputs = torch.stack(inputs, dim=0)
-        input_images = inputs[:, :3, :, :]  # Keep just RGB 
+        input_images = torch.stack(inputs, dim=0)
+        input_images = input_images[:, :3, :, :]  # Keep just RGB 
         input_images = make_grid(input_images, normalize=True)
         experiment.add_image(f"input_images/{stage}", input_images, global_step=0)  # As the input are the same each epoch, we dont specify the epoch

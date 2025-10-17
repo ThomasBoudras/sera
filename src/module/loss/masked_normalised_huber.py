@@ -25,7 +25,5 @@ class MaskedNormalisedHuber(nn.Module):
 
         pred_masked[~positive_pred_mask] = pred_masked[~positive_pred_mask] / -self.min_value
         target_masked[~positive_target_mask] = target_masked[~positive_target_mask] / -self.min_value
-
-
-        
+          
         return F.smooth_l1_loss(pred_masked, target_masked, reduction=self.reduction, beta=self.beta)

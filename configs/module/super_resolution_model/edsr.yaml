@@ -6,3 +6,4 @@ n_channels: 14
 res_scale: 0.1
 pretrained_model_path: ${data_dir}/pretrained_models/EDSR_x4.pt
 input_type: TIMESERIES
+freeze_model: False

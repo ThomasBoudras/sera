@@ -1,22 +1,22 @@
 # @package _global_
 defaults:
-    - override /module/loss: masked_normalised_huber
+    - override /module/loss: true_changes_huber
     - override /module/regression_model: utae_mf
     - override /module/metrics/metrics_calculator: difference_map_metrics
     - override /datamodule/dataset : change_map_dataset
 
 project: "train_sera"
-run_name: d-sera_d
-run_version: v2_${run_name}
+run_name: d-sera_d_true_changes
+run_version: v1_${run_name}
 data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
-ckpt_path : last
 # ckpt_path : ${data_dir}/logs/train_sera/h-sera_h_max/v1_h-sera_h_max/best_checkpoints/epoch_031.ckpt
 # load_just_weights: True
+ckpt_path: last
 
 module:
     scheduler:
         patience: 20
-        threshold: 0.0005
+        threshold: 0.005
     metrics:
         forest_mask_path: null
         classification_path: null
@@ -47,10 +47,9 @@ datamodule:
             unit_column: lidar_unit_t2
             replace_nan_by_zero_in_target: False
 
-
 callbacks:
     early_stopping:
-        min_delta: 0.0005
+        min_delta: 0.005
         patience: 35
     log_image_predictions: 
         prepare_images:

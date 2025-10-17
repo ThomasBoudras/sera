@@ -1,0 +1,6 @@
+_target_: src.module.loss.true_changes_huber.TrueChangesHuber
+reduction: mean   
+beta: 1
+delta_threshold: -10
+min_area: 100
+resolution: ${datamodule.dataset.resolution_target}

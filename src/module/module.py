@@ -67,6 +67,7 @@ class Module(LightningModule):
             on_step=True,
             on_epoch=True, 
             prog_bar=False,
+            sync_dist= True
         )
     
         if metrics_function :
@@ -90,6 +91,30 @@ class Module(LightningModule):
 
 
     def final_step(self, stage, metrics_function):
+        if stage == "val":
+            # Log the patience countdown for EarlyStopping callback if present
+            for callback in self.trainer.callbacks:
+                # EarlyStopping patience countdown
+                if hasattr(callback, "patience") and hasattr(callback, "wait_count"):
+                    remaining = callback.patience - callback.wait_count
+                    self.log(
+                        f"early_stopping_patience_remaining",
+                        remaining
+                    )
+
+            # Log the remaining patience for the scheduler (ReduceLROnPlateau) if present
+            if hasattr(self.trainer, "lr_scheduler_configs"):
+                for sched_cfg in self.trainer.lr_scheduler_configs:
+                    scheduler = sched_cfg.scheduler
+                    # Check for ReduceLROnPlateau attributes
+                    if hasattr(scheduler, "patience") and hasattr(scheduler, "num_bad_epochs"):
+                        remaining = scheduler.patience - scheduler.num_bad_epochs
+                        self.log(
+                            f"scheduler_patience_remaining",
+                            remaining
+                        )
+
+
         if metrics_function is not None :
             metrics = metrics_function.compute()
             for metric_name, metric_value in metrics.items():

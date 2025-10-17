@@ -1,3 +1,5 @@
 _target_: src.datamodule.dataset.get_changes.calculator_difference.differenceCalculator
 min_difference: -50
 max_difference : 5
+tv_denoising: false
+tv_denoising_weight: 0.1
