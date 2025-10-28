@@ -1,0 +1,29 @@
+dates :
+  - "2023/08/15" 
+  - "2024/01/15"
+
+data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data/sentinel/timeseries/ciaran
+# data_dir: /home/tboudras/code/data/sentinel/debug
+
+#Bretagne
+bbox:
+  left : 78446
+  bottom : 6663540
+  right : 360010
+  top : 6903883
+
+resolution : 10
+tile_shape : 5000
+max_tile_size : 10
+cloudless_portion : 60
+cloud_prb : 40
+country : "France"
+composite_method_s1 : TIMESERIES
+composite_method_s2 : TIMESERIES
+duration : 60
+s1_orbit: BOTH
+
+hydra:
+  run :
+    dir : ${data_dir}/logs
+  output_subdir : hydra_logs

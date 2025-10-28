@@ -11,11 +11,7 @@ from scipy.stats import linregress
 
 class get_plots_global :
     def __init__(self, save_dir, plot_set, model_name) :
-        self.save_dir = Path(save_dir).resolve()
-        if self.save_dir.exists() :
-            shutil.rmtree(self.save_dir)
-        self.save_dir.mkdir(parents=True)
-        
+        self.save_dir = Path(save_dir).resolve()        
         self.plot_set = plot_set
         self.model_name = model_name
 
@@ -122,6 +118,9 @@ class method_scatter_density:
         metrics_plot,
         max_points_on_scatter,
         point_size,
+        x_y_line,
+        fit_line,
+        show_legend,
     ):
         
         self.metric_name = metric_name
@@ -132,16 +131,20 @@ class method_scatter_density:
         self.metrics_plot = metrics_plot
         self.max_points_on_scatter = max_points_on_scatter
         self.point_size = point_size
+        self.x_y_line = x_y_line
+        self.fit_line = fit_line
+        self.show_legend = show_legend
 
     def __call__(self, metrics_global, ax):
         if self.metric_name not in metrics_global:
             raise Exception(f"Metric '{self.metric_name}' not found in metrics_global.")
         
-        y, x = metrics_global[self.metric_name]
+        x, y = metrics_global[self.metric_name]
         
         sns.set_style("ticks")
         ax.set_xlim(self.range_fig)
         ax.set_ylim(self.range_fig)
+        
         ax.set_aspect('equal', adjustable='box')
 
         # Ensure input is a numpy array
@@ -178,12 +181,6 @@ class method_scatter_density:
             clip=True,
         )
         
-    
-        # Perform linear regression
-        slope, intercept, _, _, _ = linregress(x, y)
-
-        # Generate the fit line
-        fit_line = slope * np.array(self.range_fig) + intercept
         
         if self.max_points_on_scatter is not None:
             idx = np.random.choice(len(x), size=min(len(x), self.max_points_on_scatter), replace=False)
@@ -205,27 +202,37 @@ class method_scatter_density:
             edgecolor="none",
         )
 
-        # Draw the x=y line
-        ax.plot(
-            self.range_fig,
-            self.range_fig,
-            color="black",
-            linestyle="dashed",
-            linewidth=1,
-            label="1:1",
-        )
 
-        # Plot the fit line
-        ax.plot(
-            self.range_fig,
-            fit_line,
-            color="blue",
-            linestyle="dotted",
-            linewidth=1.5,
-            label="Linear fit",
-        )
 
-        ax.legend(loc="upper left")
+        if self.x_y_line:
+            ax.plot(
+                self.range_fig,
+                self.range_fig,
+                color="black",
+                linestyle="dashed",
+                linewidth=1,
+                label="y=x",
+            )
+        
+        if self.fit_line:
+            # Perform linear regression
+            slope, intercept, _, _, _ = linregress(x, y)
+
+            # Generate the fit line
+            fit_line = slope * np.array(self.range_fig) + intercept
+
+            ax.plot(
+                self.range_fig,
+                fit_line,
+                color="blue",
+                linestyle="dotted",
+                linewidth=1.5,
+                label="Linear fit",
+            )
+
+        if self.show_legend:    
+            ax.legend(loc="upper left")
+
         # Add axis labels
         if self.x_label:
             ax.set_xlabel(self.x_label, fontsize=10)
@@ -262,50 +269,70 @@ class method_scatter_density:
             )
 
 class method_boxplot_by_bins:
-    def __init__(self, metric_name, bins, x_label, y_label, y_min=None, y_max=None):
-        self.metric_name = metric_name
+    def __init__(self, metrics_list, proportion_metric, legend_labels, bins, x_label, y_label, colors, y_min=None, y_max=None):
+        self.metrics_list = metrics_list
+        self.proportion_metric = proportion_metric
+        self.legend_labels = legend_labels
         self.bins = bins
         self.x_label = x_label
         self.y_label = y_label
+        self.colors = colors   
         self.y_min = y_min
         self.y_max = y_max
 
 
-    def __call__(self, metrics_global, ax):
-                
-        if self.metric_name not in metrics_global:
-            raise Exception(f"Metric '{self.metric_name}' not found.")
-            
-        data_to_plot = metrics_global[self.metric_name]
-        labels = self.bins
-
-        # Create boxplot
-        ax.boxplot(data_to_plot, showfliers=False)
         
-        ax.set_xticklabels(labels, rotation=40, ha="right")
+    def __call__(self, metrics_global, ax):
+        for metric_name in self.metrics_list:
+            if metric_name not in metrics_global:
+                raise Exception(f"Metric '{metric_name}' not found.")
+        if self.proportion_metric not in metrics_global:
+            raise Exception(f"Proportion metric '{self.proportion_metric}' not found.")
+
+        num_metrics = len(self.metrics_list)
+        positions = np.arange(len(self.bins))
+        # Adjust box width based on the number of metrics to plot side-by-side
+        box_width = 0.8 / num_metrics
+
+        boxplots = []
+        for i, metric_name in enumerate(self.metrics_list):
+            data_to_plot = metrics_global[metric_name]
+            # Calculate the offset for each set of boxplots to be side-by-side
+            offset = (i - (num_metrics - 1) / 2) * box_width
+            current_positions = positions + offset
+            
+            bp = ax.boxplot(data_to_plot, positions=current_positions, widths=box_width * 0.9, showfliers=False, patch_artist=True)
+            # Apply color
+            for box in bp['boxes']:
+                box.set_facecolor(self.colors[i % len(self.colors)])
+            boxplots.append(bp)
+
+        ax.set_xticks(positions)
+        ax.set_xticklabels(self.bins, rotation=40, ha="right")
         
         ax.set_xlabel(self.x_label, fontsize=14)
         ax.set_ylabel(self.y_label, fontsize=14)
         if self.y_min is not None and self.y_max is not None:
             ax.set_ylim(self.y_min, self.y_max)
         ax.grid(color="gray", linestyle="dashed", axis="y")
+
+        ax.legend([bp["boxes"][0] for bp in boxplots], self.legend_labels, loc='upper right')
         
-        # Add proportion histogram on secondary y-axis
-        ax2 = ax.twinx()
-        
-        mean = [np.mean(data) for data in data_to_plot]
-        
-        # Calculate proportions (number of values in each bin)
-        proportions = [len(data) for data in data_to_plot]
-        total_values = sum(proportions)
-        proportions_percentage = [prop / total_values * 100 for prop in proportions]
-        
-        # Plot proportions as histogram bars
-        x_positions = range(1, len(proportions) + 1)
-        ax2.bar(x_positions, proportions_percentage, alpha=0.3, color='red', width=0.6)
-        
-        ax2.set_ylabel('Proportion (%)', fontsize=14, color='red')
-        ax2.tick_params(axis='y', labelcolor='red')
-        ax2.set_ylim(0, max(proportions_percentage) * 1.1)
+        if self.proportion_metric is not None:
+            ax2 = ax.twinx()
+            proportion_data = metrics_global[self.proportion_metric]
+            proportions = [len(data) for data in proportion_data]
+            total_values = sum(proportions)
+            
+            proportions_percentage = [prop / total_values * 100 if total_values > 0 else 0 for prop in proportions]
+            
+            ax2.bar(positions, proportions_percentage, alpha=0.3, color='gray', width=0.8, zorder=0)
+            
+            ax2.set_ylabel('Proportion (%)', fontsize=14)
+            ax2.tick_params(axis='y')
+            if proportions_percentage and max(proportions_percentage) > 0:
+                    ax2.set_ylim(0, max(proportions_percentage) * 1.2)
+            else:
+                    ax2.set_ylim(0, 1)
 
 

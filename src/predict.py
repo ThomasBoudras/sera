@@ -177,8 +177,8 @@ def predict(config: DictConfig) -> None:
         patches_path = save_dir_tmp / f"patch_tifs" 
         list_subtif = [file for file in patches_path.iterdir() if file.suffix == ".tif"]  
         Parallel(n_jobs=-1)(
-            delayed(merge_tifs)(idx, tif_poly, list_subtif, save_dir_data, config.run_name) 
-            for idx, tif_poly in tqdm(enumerate(grouped_aoi_gdf["geometry"]), total=len(grouped_aoi_gdf), desc="Merging tifs")
+            delayed(merge_tifs)(tif_poly, list_subtif, save_dir_data, config.run_name) 
+            for tif_poly in tqdm(grouped_aoi_gdf["geometry"], total=len(grouped_aoi_gdf), desc="Merging tifs")
         )
 
         # Create vrt
@@ -231,12 +231,11 @@ def save_images_as_tifs(i_file, rank_dir, save_dir_tmp):
     bounds_file.unlink()
 
 
-def merge_tifs(idx, tif_poly, list_subtif, save_dir_data, model_name):
+def merge_tifs(tif_poly, list_subtif, save_dir_data, model_name):
     """
     Merge adjacent GeoTIFF files into a single image.
 
     Args:
-        idx (int): Index of the current patch being processed.
         tif_poly (Polygon): Polygon for the current patch.
         list_subtif (list): List of GeoTIFF files to merge.
         save_dir_data (Path): Path to the directory where the merged image will be saved.
@@ -314,7 +313,7 @@ def merge_tifs(idx, tif_poly, list_subtif, save_dir_data, model_name):
     transform = from_bounds(*tif_bounds, width, height)
 
     # Create the path to save the merged image
-    output_path = save_dir_data / f"{model_name}_{idx}.tif"
+    output_path = save_dir_data / f"{model_name}_{int(tif_bounds[0])}_{int(tif_bounds[1])}.tif"
 
     # Write the merged image to the output path using rasterio
     with rasterio.open(

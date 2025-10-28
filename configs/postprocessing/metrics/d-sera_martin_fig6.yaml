@@ -1,0 +1,175 @@
+model : d-sera_d_huber_loss
+min_diff : -50
+max_diff : 5
+threshold_min_value : -5
+thrashold_min_area : 50
+
+resolution : 10
+real_patch_size_plot : 500
+nb_jobs : 10
+seed : 12345
+date_column : lidar_acquisition_date
+print_config : True
+resampling_method_pred : mean
+nb_plots : 50
+
+data_dir : /lustre/fsn1/projects/rech/ego/uof45xi/data/
+save_dir : ${data_dir}/logs/metrics/diff_map/${model}
+output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
+version_prediction : test_diff_map
+version_metrics : test_diff_map_fig6_res10
+
+geometries_path : ${data_dir}/logs/pred_sera/${model}/test_diff_map/predictions/predict_gdf.geojson
+hydra:
+  run:
+    dir: ${save_dir}
+  output_subdir : hydra_logs
+
+get_images : 
+  _target_ : src.postprocessing.metrics.get_images_utils.get_images
+  image_loaded_set:
+    sentinel_rgb_t1 :
+      _target_: src.postprocessing.metrics.get_images_utils.input_image_loader
+      path: ${data_dir}/sentinel/timeseries/diff_map/lidar_date_<date>/s2/s2_vrts
+      resolution: null
+      resampling_method: bilinear
+      open_even_oob: True
+      channel_to_keep: [2,1,0]
+      grouping_dates: lidar_acquisition_date_t1
+
+    
+    sentinel_rgb_t2 :
+      _target_: src.postprocessing.metrics.get_images_utils.input_image_loader
+      path: ${data_dir}/sentinel/timeseries/diff_map/lidar_date_<date>/s2/s2_vrts
+      resolution: null
+      resampling_method: bilinear
+      open_even_oob: True
+      channel_to_keep: [2,1,0]
+      grouping_dates: lidar_acquisition_date_t2
+
+
+    difference_pred : 
+      _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      path: ${data_dir}/logs/pred_sera/${model}/${version_prediction}/predictions/data/${model}_full.vrt
+      resolution: ${resolution}
+      resampling_method: ${resampling_method_pred}
+      scaling_factor: 1
+      min_image: ${min_diff}
+      max_image: ${max_diff}
+      open_even_oob: False
+      max_date: null
+      min_date: null
+      grouping_dates: null
+
+    height_target_t1 : 
+      _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      path: ${data_dir}/lidar/<year>/lidar.vrt
+      resolution: ${resolution}
+      resampling_method: max
+      scaling_factor: 1
+      min_image: null
+      max_image: null
+      open_even_oob: False
+      max_date: null
+      min_date: null
+      grouping_dates: lidar_acquisition_date_t1
+
+    height_target_t2 : 
+      _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      path: ${data_dir}/lidar/<year>/lidar.vrt
+      resolution: ${resolution}
+      resampling_method: max
+      scaling_factor: 1
+      min_image: null
+      max_image: null
+      open_even_oob: False
+      max_date: null
+      min_date: null
+      grouping_dates: lidar_acquisition_date_t2
+      
+  image_computed_set:
+
+    difference_target :
+      _target_: src.postprocessing.metrics.get_images_utils.difference_computer
+      input_name_1: height_target_t1
+      input_name_2: height_target_t2
+      min_image: ${min_diff}
+      max_image: ${max_diff}
+    
+get_metrics_local : 
+  _target_ : src.postprocessing.metrics.get_metrics_local_utils.get_metrics_local
+  metrics_set :
+    bins_by_height_diff_pred :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.group_by_bins_local_computer
+      name_pred : difference_pred
+      name_target : height_target_t1
+      bins : [0, 5, 10, 15, 20, 25, 30, 35, 40]
+      method_metrics : keep_pred_positive
+
+    bins_by_height_diff_target :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.group_by_bins_local_computer
+      name_pred : difference_target
+      name_target : height_target_t1
+      bins : [0, 5, 10, 15, 20, 25, 30, 35, 40]
+      method_metrics : keep_pred_positive
+    
+    bins_by_height_target_height :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.group_by_bins_local_computer
+      name_pred : height_target_t1
+      name_target : height_target_t1
+      bins : [0, 5, 10, 15, 20, 25, 30, 35, 40]
+      method_metrics : return_pred
+
+
+get_metrics_global : 
+  _target_: src.postprocessing.metrics.get_metrics_global_utils.get_metrics_global
+  metrics_to_print : null
+  metrics_set :
+    bins_tuples_by_height_diff_pred :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_by_height_diff_pred
+    bins_tuples_by_height_diff_target :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_by_height_diff_target
+    bins_tuples_by_height_target_height :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_by_height_target_height
+
+get_plots_local: null
+
+get_plots_global: 
+  _target_: src.postprocessing.metrics.get_plots_global_utils.get_plots_global
+  save_dir : ${save_dir}/${version_metrics}_figures
+  model_name : ${model}
+  plot_set :
+    metrics_by_bins_height :
+      _target_: src.postprocessing.metrics.get_plots_global_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot_width: 17 
+      size_plot_height: 10
+      graph_list :
+        - _target_: src.postprocessing.metrics.get_plots_global_utils.graph_model
+          idx_row : 0
+          idx_col : 0
+          graph_title : null
+          rowspan: 1
+          colspan: 1
+          method_graph:
+            _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
+            metrics_list: 
+              - bins_tuples_by_height_diff_pred
+              - bins_tuples_by_height_diff_target
+            proportion_metric: bins_tuples_by_height_target_height
+            legend_labels:
+              - "Pred"
+              - "ALS"
+            colors:
+              - "#5698c6"
+              - "#ffb854"
+            bins : ["0-5", "5-10", "10-15", "15-20", "20-25", "25-30", "30-35", "35-40"]
+            x_label : "Height class (m)"
+            y_label : "Growth (m)"
+            y_min: -2.5
+            y_max: 4.5
+   

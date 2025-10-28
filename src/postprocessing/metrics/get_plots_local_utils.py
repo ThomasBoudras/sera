@@ -7,10 +7,6 @@ import matplotlib.colors as colors
 class get_plots_local :
     def __init__(self, save_dir, plot_set, nb_plots, model_name) :
         self.save_dir = Path(save_dir).resolve()
-        if self.save_dir.exists() :
-            shutil.rmtree(self.save_dir)
-        self.save_dir.mkdir(parents=True)
-        
         self.plot_set = plot_set
         self.nb_plots = nb_plots
         self.model_name = model_name
@@ -40,17 +36,20 @@ class plot_model :
 
         
 class graph_model :
-    def __init__(self, idx_row, idx_col, graph_title, method_graph, rowspan= 1, colspan = 1):
+    def __init__(self, idx_row, idx_col, graph_title, method_graph, grouping_dates, rowspan= 1, colspan = 1):
         self.idx_row = idx_row
         self.idx_col = idx_col
         self.graph_title = graph_title
         self.method_graph = method_graph
         self.rowspan = rowspan
         self.colspan= colspan
+        self.grouping_dates = grouping_dates
 
     def create_graph(self, images, metrics, ax, row):
         self.method_graph(images, metrics, ax, row)
-        date = row["grouping_dates"]
+        
+        date = row[self.grouping_dates] if self.grouping_dates else None
+        
         if self.graph_title :
             graph_title = self.graph_title
             if "<date>" in graph_title :

@@ -1,0 +1,327 @@
+model : d-sera_d_huber_loss
+min_diff : -50
+max_diff : 5
+threshold_min_value : -10
+thrashold_min_area : 100
+
+resolution : 2.5
+real_patch_size_plot : 500
+nb_jobs : 10
+seed : 12345
+print_config : True
+resampling_method_pred : mean
+nb_plots : 50
+
+data_dir : /lustre/fsn1/projects/rech/ego/uof45xi/data/
+save_dir : ${data_dir}/logs/metrics/diff_map/${model}
+output_path_xlsx : ${save_dir}/metrics_${model}.xlsx
+version_prediction : test_diff_map
+version_metrics : test_diff_map
+
+geometries_path : ${data_dir}/logs/pred_sera/${model}/test_diff_map/predictions/predict_gdf.geojson
+hydra:
+  run:
+    dir: ${save_dir}
+  output_subdir : hydra_logs
+
+get_images : 
+  _target_ : src.postprocessing.metrics.get_images_utils.get_images
+  image_loaded_set:
+    sentinel_rgb_t1 :
+      _target_: src.postprocessing.metrics.get_images_utils.input_image_loader
+      path: ${data_dir}/sentinel/timeseries/diff_map/lidar_date_<date>/s2/s2_vrts
+      resolution: null
+      resampling_method: bilinear
+      open_even_oob: True
+      channel_to_keep: [2,1,0]
+      grouping_dates: lidar_acquisition_date_t1
+
+    
+    sentinel_rgb_t2 :
+      _target_: src.postprocessing.metrics.get_images_utils.input_image_loader
+      path: ${data_dir}/sentinel/timeseries/diff_map/lidar_date_<date>/s2/s2_vrts
+      resolution: null
+      resampling_method: bilinear
+      open_even_oob: True
+      channel_to_keep: [2,1,0]
+      grouping_dates: lidar_acquisition_date_t2
+
+
+    difference_pred : 
+      _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      path: ${data_dir}/logs/pred_sera/${model}/${version_prediction}/predictions/data/${model}_full.vrt
+      resolution: ${resolution}
+      resampling_method: ${resampling_method_pred}
+      scaling_factor: 1
+      min_image: ${min_diff}
+      max_image: ${max_diff}
+      open_even_oob: False
+      max_date: null
+      min_date: null
+      grouping_dates: null
+
+    height_target_t1 : 
+      _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      path: ${data_dir}/lidar/<year>/lidar.vrt
+      resolution: ${resolution}
+      resampling_method: max
+      scaling_factor: 1
+      min_image: null
+      max_image: null
+      open_even_oob: False
+      max_date: null
+      min_date: null
+      grouping_dates: lidar_acquisition_date_t1
+
+    height_target_t2 : 
+      _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      path: ${data_dir}/lidar/<year>/lidar.vrt
+      resolution: ${resolution}
+      resampling_method: max
+      scaling_factor: 1
+      min_image: null
+      max_image: null
+      open_even_oob: False
+      max_date: null
+      min_date: null
+      grouping_dates: lidar_acquisition_date_t2
+      
+  image_computed_set:
+
+    difference_target :
+      _target_: src.postprocessing.metrics.get_images_utils.difference_computer
+      input_name_1: height_target_t1
+      input_name_2: height_target_t2
+      min_image: ${min_diff}
+      max_image: ${max_diff}
+    
+    change_threshold_pred :
+      _target_: src.postprocessing.metrics.get_images_utils.change_threshold_computer
+      input_name: difference_pred
+      threshold: ${threshold_min_value}
+      min_area: ${thrashold_min_area}
+
+    change_threshold_target :
+      _target_: src.postprocessing.metrics.get_images_utils.change_threshold_computer
+      input_name: difference_target
+      threshold: ${threshold_min_value}
+      min_area: ${thrashold_min_area}
+
+get_metrics_local : 
+  _target_ : src.postprocessing.metrics.get_metrics_local_utils.get_metrics_local
+  metrics_set :
+    component_mae :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.mae_component_computer
+      name_pred: difference_pred
+      name_target: difference_target
+    component_mae_negative :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.mae_component_computer
+      name_pred: difference_pred
+      name_target: difference_target
+      max_value_threshold_and: ${threshold_min_value}
+    component_mae_positive :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.mae_component_computer
+      name_pred: difference_pred
+      name_target: difference_target
+      min_value_threshold_and: 0
+    component_rmse :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.rmse_component_computer
+      name_pred: difference_pred
+      name_target: difference_target
+    component_me :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.me_component_computer
+      name_pred: difference_pred
+      name_target: difference_target
+
+    true_positive_change :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.true_positive_local_computer
+      name_pred: change_threshold_pred
+      name_target: change_threshold_target
+    false_positive_change :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.false_positive_local_computer
+      name_pred: change_threshold_pred
+      name_target: change_threshold_target
+    false_negative_change :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.false_negative_local_computer
+      name_pred: change_threshold_pred
+      name_target: change_threshold_target
+
+    mae_local :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.mean_local_computer
+      metric_component_name: component_mae
+    mae_negative_local :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.mean_local_computer
+      metric_component_name: component_mae_negative
+    mae_positive_local :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.mean_local_computer
+      metric_component_name: component_mae_positive
+    rmse_local :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.mean_local_computer
+      metric_component_name: component_rmse
+      root : True
+    me_local :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.mean_local_computer
+      metric_component_name: component_me
+
+    recall_local :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.recall_local_computer
+      name_true_positive: true_positive_change
+      name_false_negative: false_negative_change
+    precision_local :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.precision_local_computer
+      name_true_positive: true_positive_change
+      name_false_positive: false_positive_change
+    f1_score_local :
+      _target_ : src.postprocessing.metrics.get_metrics_local_utils.f1_score_local_computer
+      name_true_positive: true_positive_change
+      name_false_negative: false_negative_change
+      name_false_positive: false_positive_change
+
+
+
+get_metrics_global :
+  _target_ : src.postprocessing.metrics.get_metrics_global_utils.get_metrics_global
+  metrics_to_print : all
+  metrics_set :
+    mae_global :
+      _target_ : src.postprocessing.metrics.get_metrics_global_utils.mean_global_computeur
+      name_metric : component_mae
+    mae_negative_global :
+      _target_ : src.postprocessing.metrics.get_metrics_global_utils.mean_global_computeur
+      name_metric : component_mae_negative
+    mae_positive_global :
+      _target_ : src.postprocessing.metrics.get_metrics_global_utils.mean_global_computeur
+      name_metric : component_mae_positive
+    rmse_global :
+      _target_ : src.postprocessing.metrics.get_metrics_global_utils.mean_global_computeur
+      name_metric : component_rmse
+      root : True
+    me_global :
+      _target_ : src.postprocessing.metrics.get_metrics_global_utils.mean_global_computeur
+      name_metric : component_me
+
+    precision_global :
+      _target_ : src.postprocessing.metrics.get_metrics_global_utils.precision_global_computer
+      name_true_positive: true_positive_change
+      name_false_positive: false_positive_change
+    recall_global :
+      _target_ : src.postprocessing.metrics.get_metrics_global_utils.recall_global_computer
+      name_true_positive: true_positive_change
+      name_false_negative: false_negative_change
+    f1_score_global :
+      _target_ : src.postprocessing.metrics.get_metrics_global_utils.f1_score_global_computer
+      name_true_positive: true_positive_change
+      name_false_negative: false_negative_change
+      name_false_positive: false_positive_change
+
+    nb_values_global_mae :
+      _target_ : src.postprocessing.metrics.get_metrics_global_utils.nb_values_global_computer
+      name_metric : component_mae
+
+get_plots_local: 
+  _target_: src.postprocessing.metrics.get_plots_local_utils.get_plots_local
+  save_dir : ${save_dir}/${version_metrics}_figures
+  nb_plots: ${nb_plots}
+  model_name : ${model}
+  plot_set :
+    diff_metrics :
+      _target_ : src.postprocessing.metrics.get_plots_local_utils.plot_model
+      nb_row: 4
+      nb_col : 2
+      size_plot_width: 15
+      size_plot_height: 30
+      graph_list : 
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: "Sentinel-RGB t1 (<date>)"
+          grouping_dates: lidar_acquisition_date_t1
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
+            image_name : sentinel_rgb_t1
+            real_patch_size: ${real_patch_size_plot}
+            resolution: 10
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 0
+          idx_col: 1
+          graph_title: "Sentinel-RGB t2 (<date>)"
+          grouping_dates: lidar_acquisition_date_t2
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
+            image_name : sentinel_rgb_t2
+            real_patch_size: ${real_patch_size_plot}
+            resolution: 10
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 1
+          idx_col: 0
+          graph_title: "Predicted difference"
+          grouping_dates: null
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
+            image_name : difference_pred
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: RdYlGn
+            norm : 
+              _target_: matplotlib.colors.TwoSlopeNorm
+              vmin: ${min_diff}
+              vcenter: 0
+              vmax: ${max_diff}
+
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 1
+          idx_col: 1
+          graph_title: "Target difference"
+          grouping_dates: null
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
+            image_name : difference_target
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: RdYlGn
+            norm : 
+              _target_ : matplotlib.colors.TwoSlopeNorm
+              vmin: ${min_diff}
+              vcenter: 0
+              vmax : ${max_diff}
+
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 2
+          idx_col: 0
+          graph_title: "Predicted change"
+          grouping_dates: null
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
+            image_name : change_threshold_pred
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: Reds
+            norm : null
+          
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 2
+          idx_col: 1
+          graph_title: "Target change"
+          grouping_dates: null
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
+            image_name : change_threshold_target
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: Reds
+            norm : null
+
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 3
+          idx_col: 0
+          colspan: 2
+          graph_title: "Metrics"
+          grouping_dates: null
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_table
+            metrics_list : [mae_local, mae_negative_local, mae_positive_local, rmse_local, me_local, recall_local, precision_local, f1_score_local]
+            font_size : 14
+            table_width_scale : 0.7
+            table_height_scale : 1.8
+
+get_plots_global: null

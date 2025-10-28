@@ -1,21 +1,19 @@
 # @package _global_
 defaults:
-    - override /module/loss: growth_and_changes_huber
+    - override /module/loss: true_changes_huber
     - override /module/regression_model: utae_mf
     - override /module/metrics/metrics_calculator: difference_map_metrics
     - override /datamodule/dataset : change_map_dataset
 
 project: "train_sera"
-run_name: d-sera_d_gc_loss_denoised
+run_name: d-sera_d_true_changes_denoised
 run_version: v1_${run_name}
 data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
-# ckpt_path : ${data_dir}/logs/train_sera/h-sera_h_max/v1_h-sera_h_max/best_checkpoints/epoch_031.ckpt
-# load_just_weights: True
-ckpt_path: last
+ckpt_path : ${data_dir}/logs/train_sera/h-sera_h_max/v1_h-sera_h_max/best_checkpoints/epoch_031.ckpt
+load_just_weights: True
+# ckpt_path: last
 
 module:
-    optimizer:
-        lr: 1e-5 # final adjustment
     scheduler:
         patience: 20
         threshold: 0.005
@@ -68,6 +66,5 @@ callbacks:
             max_nb_timeseries_input: 5
 
 trainer:
-    max_epochs: 140 # final adjustment
     devices: auto   
     strategy: auto

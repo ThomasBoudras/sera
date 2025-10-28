@@ -26,7 +26,7 @@ class precision_global_computer:
 
         # Calculate Precision
         if true_positive + false_positive == 0:
-            return 0
+            return np.nan
         precision = true_positive / (true_positive + false_positive)
         return precision
     
@@ -45,7 +45,7 @@ class  recall_global_computer :
         
         # Calculate Recall
         if true_positive + false_negative == 0:
-            return 0
+            return np.nan
         recall = true_positive / (true_positive + false_negative)
         return recall
     
@@ -65,19 +65,15 @@ class f1_score_global_computer:
         false_positive = np.sum(metrics_local[self.name_false_positive])
                 
         # Calculate Precision and Recall
-        if true_positive + false_positive == 0:
-            precision = 0
-        else:
-            precision = true_positive / (true_positive + false_positive)
+        if true_positive + false_positive == 0 or true_positive + false_negative == 0 :
+            return  np.nan
         
-        if true_positive + false_negative == 0:
-            recall = 0
-        else:
-            recall = true_positive / (true_positive + false_negative)
+        precision = true_positive / (true_positive + false_positive)
+        recall = true_positive / (true_positive + false_negative)
         
         # Calculate F1 Score
         if precision + recall == 0 :
-            return 0
+            return np.nan
         f1_score = 2 * (precision * recall) / (precision + recall)
         return f1_score
 

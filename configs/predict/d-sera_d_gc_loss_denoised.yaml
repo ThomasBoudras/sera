@@ -1,0 +1,32 @@
+# @package _global_
+
+defaults:
+  - override /train: d-sera_d_gc_loss_denoised
+  - _self_
+
+project : "pred_sera"
+run_version: test_diff_map
+
+ckpt_path : ${data_dir}/logs/train_sera/d-sera_d_gc_loss_denoised/v1_d-sera_d_gc_loss_denoised/best_checkpoints/epoch_111.ckpt
+load_just_weights: True
+
+save_dir: ${log_dir}/predictions
+
+via_bounds : null
+via_geojson :
+  path : ${data_dir}/sentinel/timeseries/diff_map/gdf_diff_map_timeseries_predict.geojson
+  split: test
+
+datamodule:
+  dataset:
+    get_inputs: 
+      open_even_oob: True
+
+
+model:
+  instance:
+    train_metrics: null
+    val_metrics: null 
+    test_metrics: null
+    predictions_save_dir : ${save_dir}
+    
