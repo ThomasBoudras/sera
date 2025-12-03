@@ -18,8 +18,12 @@ via_geojson :
   split: test
 
 datamodule:
+  instance:
+    normalization_save_path: ${data_dir}/normalization/sentinel_diff
   dataset:
-    get_inputs: 
+    get_inputs_t1: 
+      open_even_oob: True
+    get_inputs_t2: 
       open_even_oob: True
 
 

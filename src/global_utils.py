@@ -12,6 +12,9 @@ from omegaconf import DictConfig, OmegaConf
 from lightning.pytorch.utilities import rank_zero_only
 from skimage.measure import block_reduce
 from math import gcd
+import geopandas as gpd
+import pooch
+import json
 
 def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     """Initializes multi-GPU-friendly python logger."""
@@ -180,3 +183,50 @@ def get_window(
         )
     return data, profile
  
+
+class DiffGdfAdapter   :
+    def __init__(self, country="France", min_images=1, date_columns=["date"]):
+        """
+        Args:
+            country (str): The country name to check inclusion (default: "France").
+            min_images (int): Minimal number of images required per geometry.
+            date_columns (list[str]): Name of the columns containing image dates/info.
+        """
+        self.country = country
+        self.min_images = min_images
+        self.date_columns = date_columns
+        country_borders_url = (
+        "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/"
+        "world-administrative-boundaries/exports/geojson"
+        )
+        country_borders_path = pooch.retrieve(url=country_borders_url, known_hash=None)
+        country_borders = gpd.read_file(country_borders_path)
+        if self.country not in country_borders.name.values:
+            raise ValueError(f"Unknown country {self.country}.")
+        self.country_geo = country_borders[country_borders.name == self.country]
+
+    def __call__(self, gdf):
+        """
+        Subdivides gdf geometries into patches, and filters by: image count and intersection in the country.
+
+        Args:
+            gdf (gpd.GeoDataFrame): Input GeoDataFrame.
+            patch_size (float): Size of each patch.
+            resolution (float, optional): Resolution for get_grid (defaults to patch_size).
+
+        Returns:
+            gpd.GeoDataFrame: Adapted GeoDataFrame.
+        """
+        
+        # Filter by number of images for each date column
+        for col in self.date_columns:
+            if col in gdf.columns:
+                gdf = gdf[gdf[col].apply(lambda x: len(json.loads(x)) if x is not None else 0) >= self.min_images]
+    
+        # Reproject country shape to match gdf's CRS for accurate intersection
+        country_geo_reprojected = self.country_geo.to_crs(gdf.crs)
+        country_shape_reprojected = country_geo_reprojected.geometry.unary_union
+        
+        gdf = gdf[gdf["geometry"].intersects(country_shape_reprojected)]
+
+        return gdf.reset_index(drop=True)

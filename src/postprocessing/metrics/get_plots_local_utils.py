@@ -22,17 +22,22 @@ class get_plots_local :
             plt.close()
 
 class plot_model :
-    def __init__(self, graph_list, nb_row, nb_col, size_plot_width, size_plot_height):
+    def __init__(self, graph_list, nb_row, nb_col, size_plot_width, size_plot_height, hspace=0.3, wspace=0.3):
         self.graph_list = graph_list
         self.nb_row = nb_row
         self.nb_col = nb_col
         self.size_plot_width = size_plot_width
         self.size_plot_height = size_plot_height
+        self.hspace = hspace  # Horizontal space between subplots
+        self.wspace = wspace  # Width space between subplots
     
     def create_plot(self, images, metrics, row):
         for graph in self.graph_list :
             ax = plt.subplot2grid((self.nb_row, self.nb_col), (graph.idx_row, graph.idx_col), rowspan=graph.rowspan, colspan=graph.colspan)
             graph.create_graph(images, metrics, ax, row)
+        
+        # Adjust spacing between subplots
+        plt.subplots_adjust(hspace=self.hspace, wspace=self.wspace)
 
         
 class graph_model :

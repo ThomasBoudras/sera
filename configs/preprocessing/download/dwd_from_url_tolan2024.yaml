@@ -1,22 +1,22 @@
-name: paul2025
-url: projects/worldwidemap/assets/europe_<year>
+name: tolan2024
+url: projects/meta-forest-monitoring-okw37/assets/CanopyHeight
+
 gee_project: "ee-thomasboudras04"
 
 root_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data
 data_dir: ${root_dir}/sota/${name}
-# gdf_path : ${root_dir}/utils/gdf_height_map_initial.geojson
 gdf_path : ${root_dir}/logs/pred_sera/h-sera_h_max/test_lidarhd/predictions/predict_gdf.geojson
 grouping_dates: lidar_acquisition_date
-selected_bands: [b1]
-pixel_range: [-32768, 32767]
-min_year: 2020
-max_year: 2022
+selected_bands: [cover_code]
+pixel_range: [0, 255]
+min_year: null
+max_year: null
 split: test
 
 
 n_jobs_parrallelized : 5
 
-resolution : 10
+resolution : 1
 tile_shape : 5000
 max_tile_size : 10
 country : "France"

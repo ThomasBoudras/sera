@@ -5,7 +5,7 @@ defaults:
   - _self_
 
 project : "pred_sera"
-run_version: test_diff_map
+run_version: ciaran_map
 
 ckpt_path : ${data_dir}/logs/train_sera/d-sera_d_huber_loss/v1_d-sera_d_huber_loss/last_checkpoints/last.ckpt
 load_just_weights: True
@@ -14,17 +14,28 @@ save_dir: ${log_dir}/predictions
 
 via_bounds : null
 via_geojson :
-  path : ${data_dir}/sentinel/timeseries/diff_map/gdf_diff_map_timeseries_predict.geojson
-  split: test
+  path : ${data_dir}/sentinel/timeseries/ciaran/gdf_ciaran_timeseries.geojson
+  split: null
+patch_size_max: 20000
 
 datamodule:
   instance:
     normalization_save_path: ${data_dir}/normalization/sentinel_diff
-  dataset: 
+  dataset:
     get_inputs_t1: 
+      inputs_path: ${data_dir}/sentinel/timeseries/ciaran/
       open_even_oob: True
+      nb_timeseries_image_min: 1
     get_inputs_t2: 
+      inputs_path: ${data_dir}/sentinel/timeseries/ciaran/
       open_even_oob: True
+      nb_timeseries_image_min: 1
+
+adapt_gdf: 
+  _target_: src.global_utils.DiffGdfAdapter
+  country: "France"
+  min_images: 3
+  date_columns: [valid_vrts_t1, valid_vrts_t2]
 
 
 model:

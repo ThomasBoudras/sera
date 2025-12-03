@@ -1,6 +1,6 @@
 model : h-comparison
 min_height : 0
-max_height : 50
+max_height : 40
 resolution : 2.5
 real_patch_size_plot : 500
 nb_jobs : 10
@@ -70,11 +70,24 @@ get_images :
       min_date: null
       grouping_dates: ${grouping_dates}
 
-    height_pred_lang : 
+    height_pred_liu :
       _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
-      path : /lustre/fsn1/projects/rech/ego/uof45xi/data/sota/lang/full_2154.vrt
+      path : /lustre/fsn1/projects/rech/ego/uof45xi/data/sota/liu2023/liu2023/full.vrt
       resolution: ${resolution}
       resampling_method: bilinear
+      scaling_factor: 1
+      min_image: ${min_height}
+      max_image: ${max_height}
+      open_even_oob: False
+      max_date: null
+      min_date: null
+      grouping_dates: ${grouping_dates}
+
+    height_pred_tolan :
+      _target_: src.postprocessing.metrics.get_images_utils.output_image_loader
+      path : /lustre/fsn1/projects/rech/ego/uof45xi/data/sota/tolan2024/tolan2024/full.vrt
+      resolution: ${resolution}
+      resampling_method: max
       scaling_factor: 1
       min_image: ${min_height}
       max_image: ${max_height}
@@ -178,11 +191,11 @@ get_plots_local:
         - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
           idx_row: 1
           idx_col: 0
-          graph_title: "Lang predicted height (Sentinel 2)"
+          graph_title: "Liu predicted height (Planet)"
           grouping_dates: ${grouping_dates}
           method_graph: 
             _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
-            image_name : height_pred_lang
+            image_name : height_pred_liu
             real_patch_size: ${real_patch_size_plot}
             resolution: ${resolution}
             cmap: magma
@@ -222,6 +235,21 @@ get_plots_local:
               vmax : ${max_height}
         - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
           idx_row: 2
+          idx_col: 0
+          graph_title: "Tolan predicted height (Maxar)"
+          grouping_dates: ${grouping_dates}
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
+            image_name : height_pred_tolan
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: magma
+            norm : 
+              _target_ : matplotlib.colors.Normalize
+              vmin: ${min_height}
+              vmax : ${max_height}
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 2
           idx_col: 1
           graph_title: "Schwartz predicted height (Sentinel 1/2)"
           grouping_dates: ${grouping_dates}
@@ -238,7 +266,7 @@ get_plots_local:
         - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
           idx_row: 2
           idx_col: 2
-          graph_title: "Open-Canopy predicted height (Spot)"
+          graph_title: "Fogel predicted height (Spot)"
           grouping_dates: ${grouping_dates}
           method_graph: 
             _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
@@ -310,29 +338,6 @@ get_plots_local:
               vmin: ${min_height}
               vmax : ${max_height}
 
-    individual_plot_lang2023 :
-      _target_ : src.postprocessing.metrics.get_plots_local_utils.plot_model
-      nb_row: 1
-      nb_col : 1
-      size_plot_width: 25
-      size_plot_height: 25
-      graph_list : 
-        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
-          idx_row: 0
-          idx_col: 0
-          graph_title: null
-          grouping_dates: ${grouping_dates}
-          method_graph: 
-            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
-            image_name : height_pred_lang
-            real_patch_size: ${real_patch_size_plot}
-            resolution: ${resolution}
-            cmap: magma
-            norm : 
-              _target_ : matplotlib.colors.Normalize
-              vmin: ${min_height}
-              vmax : ${max_height}
-            
     individual_plot_pauls2025 :
       _target_ : src.postprocessing.metrics.get_plots_local_utils.plot_model
       nb_row: 1
@@ -417,6 +422,52 @@ get_plots_local:
           method_graph: 
             _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
             image_name : height_pred_open_canopy
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: magma
+            norm : 
+              _target_ : matplotlib.colors.Normalize
+              vmin: ${min_height}
+              vmax : ${max_height}
+
+    individual_plot_liu2023 :
+      _target_ : src.postprocessing.metrics.get_plots_local_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot_width: 25
+      size_plot_height: 25
+      graph_list : 
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: null
+          grouping_dates: ${grouping_dates}
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
+            image_name : height_pred_liu
+            real_patch_size: ${real_patch_size_plot}
+            resolution: ${resolution}
+            cmap: magma
+            norm : 
+              _target_ : matplotlib.colors.Normalize
+              vmin: ${min_height}
+              vmax : ${max_height}
+
+    individual_plot_tolan2024 :
+      _target_ : src.postprocessing.metrics.get_plots_local_utils.plot_model
+      nb_row: 1
+      nb_col : 1
+      size_plot_width: 25
+      size_plot_height: 25
+      graph_list : 
+        - _target_: src.postprocessing.metrics.get_plots_local_utils.graph_model
+          idx_row: 0
+          idx_col: 0
+          graph_title: null
+          grouping_dates: ${grouping_dates}
+          method_graph: 
+            _target_: src.postprocessing.metrics.get_plots_local_utils.method_imshow 
+            image_name : height_pred_tolan
             real_patch_size: ${real_patch_size_plot}
             resolution: ${resolution}
             cmap: magma

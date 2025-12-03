@@ -3,6 +3,7 @@ dates :
   - "2023/09/15"
 
 data_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data/sentinel/timeseries/chantilly
+gee_project: "ee-thomasboudras04"
 
 bbox:
   left : 653200

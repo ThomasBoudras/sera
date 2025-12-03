@@ -67,11 +67,11 @@ def get_grid(global_bounds, patch_size, margin_size, resolution):
     max_x = global_bounds[2] + border_margin_size
     max_y = global_bounds[3] + border_margin_size
 
-    assert ((max_x - min_x) > patch_size) and ((max_y - min_y) > patch_size), \
-        "Expanded bounds must be larger than patch size."
+    max_x = max(min_x + patch_size, max_x)
+    max_y = max(min_y + patch_size, max_y)
 
     x_start = min_x
-    while x_start < max_x - 2*border_margin_size:
+    while x_start < max_x:
         y_start = min_y
         while y_start < max_y - 2*border_margin_size:
             x_stop = x_start + patch_size

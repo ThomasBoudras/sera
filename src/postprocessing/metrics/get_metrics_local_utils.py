@@ -1,5 +1,5 @@
 import numpy as np
-
+import json
 
 class get_metrics_local:
     def __init__(self, metrics_set) :
@@ -399,6 +399,59 @@ class group_by_bins_local_computer:
         return bin_metrics
 
 
+class group_by_nb_image_local_computer:
+    """
+    Computer that groups metrics by date bins based on a specified date column.
+    
+    This class processes images to compute metrics for specific date ranges,
+    allowing for temporal analysis of predictions versus targets.
+    
+    Args:
+        name_pred (str): Name of the prediction image in the images dictionary
+        name_target (str): Name of the target image in the images dictionary
+        name_base (str): Base name for the output metrics
+        bins_nb_image (list): List of date bin tuples defining the date ranges
+        vrts_column (str): Name of the column containing date information
+        method_metrics (callable): Method to compute metrics between predictions and targets
+    """
+    def __init__(self, name_pred, name_target, bins_nb_image, vrts_column, method_metrics):
+        self.name_pred = name_pred
+        self.name_target = name_target
+        self.bins_nb_image = bins_nb_image
+        self.vrts_column = vrts_column 
+        self.method_metrics = getattr(self, method_metrics)
+
+    def absolute_error(self, pred, target):
+        return np.abs(pred - target)
+    
+    def squared_error(self, pred, target):
+        return np.square(pred - target)
+    
+    def error(self, pred, target):
+        return pred - target
+        
+    def compute_metrics(self, images, metrics_previous, row) :
+        if (self.name_pred not in images) or (self.name_target) not in images :
+            Exception(f"You must first load {self.name_pred} and {self.name_target}")
+        
+        target = images[self.name_target]
+        pred = images[self.name_pred]
+        
+        nan_mask = np.isnan(target) | np.isnan(pred)
+        target = target[~nan_mask]
+        pred = pred[~nan_mask]
+        
+        nb_image = len(json.loads(row[self.vrts_column]))
+
+        bin_metrics = []
+        for bin in self.bins_nb_image:
+            if (nb_image >= int(bin[0])) and (nb_image <= int(bin[1])):  # check if the month is in the bin
+                bin_metrics.append(self.method_metrics(pred, target))
+            else :
+                bin_metrics.append(np.array([]))
+        
+        return bin_metrics
+        
 class group_by_date_local_computer:
     """
     Computer that groups metrics by date bins based on a specified date column.

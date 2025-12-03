@@ -54,7 +54,7 @@ def main(cfg: DictConfig) -> None:
 
 def process_geometry(row_gdf, cfg):
     """Process a single geometry row and perform the download."""
-    geefetch.utils.gee.auth("ee-thomasboudras04")
+    geefetch.utils.gee.auth(cfg.gee_project)
     
     date = row_gdf["grouping_dates"]
     geometry = row_gdf["geometry"]

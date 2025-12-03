@@ -64,22 +64,23 @@ def main(cfg: DictConfig) -> None:
 
 def process_geometry(row_gdf, cfg, data_dir):
     """Process a single geometry row and perform the download."""
-    geefetch.utils.gee.auth("ee-thomasboudras04")
+    geefetch.utils.gee.auth(cfg.gee_project)
     
     date = row_gdf["grouping_dates"]
     geometry = row_gdf["geometry"]
     
     # Convert the date to get the first and last day of the year
     year = date[:4]
-    year = max(int(year), int(cfg.min_year))
-    year = str(min(int(year), int(cfg.max_year)))
+    if cfg.min_year is not None:
+        year = str(max(int(year), int(cfg.min_year)))
+    if cfg.max_year is not None:
+        year = str(min(int(year), int(cfg.max_year)))
     # We ensure that each spatially disjointed polygon is processed on a sepatly of the gdf, to avoid downloading data between the two that we're not interested in.
     if geometry.geom_type == 'MultiPolygon':
             polygons = [polygon for polygon in geometry.geoms]
     else :
         polygons = [geometry]
 
-    print(f"date {date}, nb polygons {len(polygons)}")
     for polygon in polygons :
         bounds = polygon.bounds
         if "<year>" in cfg.url:
@@ -87,6 +88,7 @@ def process_geometry(row_gdf, cfg, data_dir):
             data_dir_year = data_dir / year
         else:
             url = cfg.url
+            data_dir_year = data_dir
         
         if not data_dir_year.exists():
             data_dir_year.mkdir(parents=True)
@@ -103,11 +105,9 @@ def process_geometry(row_gdf, cfg, data_dir):
                 self.resolution = resolution
             
             def bands(self):
-                print(f"ceci est une selected_bands {type(self.selected_bands)}")
                 return self.selected_bands
 
             def default_selected_bands(self):
-                print(f"ceci est une selected_bands {type(self.selected_bands)}")
                 return self.selected_bands
 
             def pixel_range(self):

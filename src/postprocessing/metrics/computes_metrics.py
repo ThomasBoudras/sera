@@ -24,12 +24,17 @@ def compute_metrics(config: DictConfig) -> None:
     # Read the geometries and save them in save_dir
     aoi_gdf = gpd.read_file(config.geometries_path)
     aoi_gdf_path = Path(config.save_dir) / "gdf_metrics.geojson"
+    if config.get("n_samples", None) is not None:
+        aoi_gdf = aoi_gdf.sample(config.n_samples).reset_index(drop=True)
     aoi_gdf.to_file(aoi_gdf_path, driver="GeoJSON")
 
     # Split the GeoDataFrame into chunks for parallel processing.
     nb_jobs = config.get("nb_jobs")
-    chunk_size = len(aoi_gdf) // (nb_jobs * 4)
-    chunk_size = chunk_size if chunk_size > 0 else 1
+    if config.get("chunk_size", None) is not None:
+        chunk_size = config.chunk_size
+    else:
+        chunk_size = len(aoi_gdf) // (nb_jobs * 4)
+        chunk_size = chunk_size if chunk_size > 0 else 1
     aoi_gdf_chunks = [aoi_gdf.iloc[i:i + chunk_size] for i in range(0, len(aoi_gdf), chunk_size)]
     
     # Instantiate the plots local if needed

@@ -16,7 +16,7 @@ save_dir: ${log_dir}/predictions_${time_type}
 
 via_bounds : null
 via_geojson :
-  path : ${data_dir}/sentinel/timeseries/diff_map/gdf_diff_map_timeseries_predict.geojson
+  path : ${data_dir}/sentinel/timeseries/diff_map/predict_gdf_diff_h_max_debug.geojson
   split: test
 
 datamodule:

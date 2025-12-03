@@ -164,10 +164,13 @@ get_plots_global:
           colspan: 2
           method_graph:
             _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
-            metric_name: bins_tuples_absolute_error
+            metrics_list: [bins_tuples_absolute_error]
+            proportion_metric: bins_tuples_absolute_error
+            legend_labels: null
             bins : ["0-2", "2-5", "5-10", "10-15", "15-20", "20-30", "30-60"]
             x_label : "Bins"
             y_label : "Absolute Error (m)"
+            colors: null
             y_min: -0.5
             y_max: 15
 
@@ -179,10 +182,13 @@ get_plots_global:
           colspan: 2
           method_graph:
             _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
-            metric_name: bins_tuples_error
+            metrics_list: [bins_tuples_error]
+            proportion_metric: bins_tuples_error
+            legend_labels: null
             bins : ["0-2", "2-5", "5-10", "10-15", "15-20", "20-30", "30-60"]
             x_label : "Bins"
             y_label : "Error (m)"
+            colors: null
             y_min: -15
             y_max: 15
 
@@ -194,10 +200,13 @@ get_plots_global:
           colspan: 2
           method_graph:
             _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
-            metric_name: bins_date_tuples_absolute_error
+            metrics_list: [bins_date_tuples_absolute_error]
+            proportion_metric: bins_date_tuples_absolute_error
+            legend_labels: null
             bins : ["Winter", "Spring", "Summer", "Autumn"]
             x_label : "Bins"
             y_label : "Absolute Error (m)"
+            colors: null
             y_min: -0.5
             y_max: 12.5
 
@@ -209,10 +218,13 @@ get_plots_global:
           colspan: 2
           method_graph:
             _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
-            metric_name: bins_date_tuples_squared_error
+            metrics_list: [bins_date_tuples_squared_error]
+            proportion_metric: bins_date_tuples_squared_error
+            legend_labels: null
             bins : ["Winter", "Spring", "Summer", "Autumn"]
             x_label : "Bins"
             y_label : "Squared Error (m^2)"
+            colors: null
             y_min: -0.5
             y_max: 25
     

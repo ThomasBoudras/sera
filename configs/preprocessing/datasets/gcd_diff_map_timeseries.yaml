@@ -6,8 +6,11 @@ get_valid_vrts: src.preprocessing.datasets.get_clean_dataset_utils.get_valid_vrt
 
 n_jobs_parrallelized: -1
 
-initial_gdf_path: ${root_dir}/utils/gdf_diff_map_timeseries_t1.geojson
-grouping_dates: lidar_acquisition_date_t2
+via_bounds: null
+via_geojson:
+  path: ${root_dir}/utils/gdf_diff_map_timeseries_t1.geojson
+
+grouping_dates_column: lidar_acquisition_date_t2
 validation_column: valid_vrts_t2
 # gdf_clean_path: ${root_dir}/utils/gdf_diff_map_timeseries_t1.geojson
 # gdf_unclean_path: ${root_dir}/utils/gdf_diff_map_timeseries_t1_unsaved.geojson

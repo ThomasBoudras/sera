@@ -64,14 +64,14 @@ get_metrics_local :
       name_target : height_target
       bins : [0, 2, 5, 10, 15, 20, 30, 60]
       method_metrics : absolute_error
-
+    
     bins_error :
       _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_bins_local_computer
       name_pred : height_pred
       name_target : height_target
       bins : [0, 2, 5, 10, 15, 20, 30, 60]
       method_metrics : error
-
+    
     bins_date_absolute_error :
       _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_date_local_computer
       name_pred : height_pred
@@ -79,7 +79,7 @@ get_metrics_local :
       bins_dates : [["01", "03"], ["04", "06"], ["07", "09"], ["10", "12"]]
       date_column : lidar_acquisition_date
       method_metrics : absolute_error
-
+    
     bins_date_squared_error :
       _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_date_local_computer
       name_pred : height_pred
@@ -87,6 +87,30 @@ get_metrics_local :
       bins_dates : [["01", "03"], ["04", "06"], ["07", "09"], ["10", "12"]]
       date_column : lidar_acquisition_date
       method_metrics : squared_error
+
+    bins_nb_image_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_nb_image_local_computer
+      name_pred : height_pred
+      name_target : height_target
+      bins_nb_image : [[4,8], [9,12], [13,16], [17,20], [21,24]]
+      vrts_column : valid_vrts
+      method_metrics : absolute_error
+
+    bins_nb_image_squared_error :
+      _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_nb_image_local_computer
+      name_pred : height_pred
+      name_target : height_target
+      bins_nb_image : [[4,8], [9,12], [13,16], [17,20], [21,24]]
+      vrts_column : valid_vrts
+      method_metrics : squared_error
+    
+    bins_nb_image_error :
+      _target_: src.postprocessing.metrics.get_metrics_local_utils.group_by_nb_image_local_computer
+      name_pred : height_pred
+      name_target : height_target
+      bins_nb_image : [[4,8], [9,12], [13,16], [17,20], [21,24]]
+      vrts_column : valid_vrts
+      method_metrics : error
     
     flatten_target_pred :
       _target_: src.postprocessing.metrics.get_metrics_local_utils.flatten_local_computer
@@ -95,7 +119,7 @@ get_metrics_local :
 
 get_metrics_global : 
   _target_: src.postprocessing.metrics.get_metrics_global_utils.get_metrics_global
-  metrics_to_print : ["bins_date_mean_absolute_error", "bins_date_std_absolute_error", "bins_date_mean_squared_error", "bins_date_std_squared_error", "bins_mean_absolute_error", "bins_std_absolute_error", "bins_mean_error", "bins_std_error"]
+  metrics_to_print : ["bins_date_mean_absolute_error", "bins_date_std_absolute_error", "bins_date_mean_squared_error", "bins_date_std_squared_error", "bins_mean_absolute_error", "bins_std_absolute_error", "bins_mean_error", "bins_std_error", "bins_nb_image_mean_absolute_error", "bins_nb_image_std_absolute_error", "bins_nb_image_mean_squared_error", "bins_nb_image_std_squared_error", "bins_nb_image_mean_error", "bins_nb_image_std_error"]
   metrics_set :
     bins_tuples_absolute_error :
       _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
@@ -103,6 +127,7 @@ get_metrics_global :
     bins_tuples_error :
       _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
       name_metric : bins_error
+      
     bins_date_tuples_absolute_error :
       _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
       name_metric : bins_date_absolute_error
@@ -110,6 +135,16 @@ get_metrics_global :
       _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
       name_metric : bins_date_squared_error
     
+    bins_nb_image_tuples_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_nb_image_absolute_error
+    bins_nb_image_tuples_squared_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_nb_image_squared_error
+    bins_nb_image_tuples_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
+      name_metric : bins_nb_image_error
+
     bins_mean_absolute_error :
       _target_: src.postprocessing.metrics.get_metrics_global_utils.mean_tuples_global_computer
       name_metric : bins_absolute_error
@@ -122,6 +157,15 @@ get_metrics_global :
     bins_date_mean_squared_error :
       _target_: src.postprocessing.metrics.get_metrics_global_utils.mean_tuples_global_computer
       name_metric : bins_date_squared_error
+    bins_nb_image_mean_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.mean_tuples_global_computer
+      name_metric : bins_nb_image_absolute_error
+    bins_nb_image_mean_squared_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.mean_tuples_global_computer
+      name_metric : bins_nb_image_squared_error
+    bins_nb_image_mean_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.mean_tuples_global_computer
+      name_metric : bins_nb_image_error
 
     bins_std_absolute_error :
       _target_: src.postprocessing.metrics.get_metrics_global_utils.std_tuples_global_computer
@@ -135,6 +179,15 @@ get_metrics_global :
     bins_date_std_squared_error :
       _target_: src.postprocessing.metrics.get_metrics_global_utils.std_tuples_global_computer
       name_metric : bins_date_squared_error
+    bins_nb_image_std_absolute_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.std_tuples_global_computer
+      name_metric : bins_nb_image_absolute_error
+    bins_nb_image_std_squared_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.std_tuples_global_computer
+      name_metric : bins_nb_image_squared_error
+    bins_nb_image_std_error :
+      _target_: src.postprocessing.metrics.get_metrics_global_utils.std_tuples_global_computer
+      name_metric : bins_nb_image_error
 
     flatten_tuples_target_pred :
       _target_: src.postprocessing.metrics.get_metrics_global_utils.concat_tuples_global_computer
@@ -148,7 +201,7 @@ get_plots_global:
   save_dir : ${save_dir}/${version_metrics}_figures
   model_name : ${model}
   plot_set :
-    metrics_by_bins :
+    boxplots_by_bins :
       _target_: src.postprocessing.metrics.get_plots_global_utils.plot_model
       nb_row: 4
       nb_col : 2
@@ -163,10 +216,13 @@ get_plots_global:
           colspan: 2
           method_graph:
             _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
-            metric_name: bins_tuples_absolute_error
+            metrics_list: [bins_tuples_absolute_error]
+            proportion_metric: bins_tuples_absolute_error
+            legend_labels: null
             bins : ["0-2", "2-5", "5-10", "10-15", "15-20", "20-30", "30-60"]
             x_label : "Bins"
             y_label : "Absolute Error (m)"
+            colors: null
             y_min: -0.5
             y_max: 15
 
@@ -178,10 +234,13 @@ get_plots_global:
           colspan: 2
           method_graph:
             _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
-            metric_name: bins_tuples_error
+            metrics_list: [bins_tuples_error]
+            proportion_metric: bins_tuples_error
+            legend_labels: null
             bins : ["0-2", "2-5", "5-10", "10-15", "15-20", "20-30", "30-60"]
             x_label : "Bins"
             y_label : "Error (m)"
+            colors: null
             y_min: -15
             y_max: 15
 
@@ -193,10 +252,13 @@ get_plots_global:
           colspan: 2
           method_graph:
             _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
-            metric_name: bins_date_tuples_absolute_error
+            metrics_list: [bins_date_tuples_absolute_error]
+            proportion_metric: bins_date_tuples_absolute_error
+            legend_labels: null
             bins : ["Winter", "Spring", "Summer", "Autumn"]
             x_label : "Bins"
             y_label : "Absolute Error (m)"
+            colors: null
             y_min: -0.5
             y_max: 12.5
 
@@ -208,13 +270,77 @@ get_plots_global:
           colspan: 2
           method_graph:
             _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
-            metric_name: bins_date_tuples_squared_error
+            metrics_list: [bins_date_tuples_squared_error]
+            proportion_metric: bins_date_tuples_squared_error
+            legend_labels: null
             bins : ["Winter", "Spring", "Summer", "Autumn"]
             x_label : "Bins"
             y_label : "Squared Error (m^2)"
+            colors: null
             y_min: -0.5
             y_max: 25
-    
+   
+    boxplot_by_nb_image:
+      _target_: src.postprocessing.metrics.get_plots_global_utils.plot_model
+      nb_row: 3
+      nb_col : 1
+      size_plot_width: 15
+      size_plot_height: 23
+      graph_list :
+        - _target_: src.postprocessing.metrics.get_plots_global_utils.graph_model
+          idx_row : 0
+          idx_col : 0
+          graph_title : "MAE by Number of Images"
+          rowspan: 1
+          colspan: 1
+          method_graph:
+            _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
+            metrics_list: [bins_nb_image_tuples_absolute_error]
+            proportion_metric: bins_nb_image_tuples_absolute_error
+            legend_labels: null
+            bins : ["4-8", "9-12", "13-16", "17-20", "21-24"]
+            x_label : "Number of Images"
+            y_label : "Absolute Error (m)"
+            colors: ["#ffb854"]
+            y_min: -0.5
+            y_max: 15
+
+        - _target_: src.postprocessing.metrics.get_plots_global_utils.graph_model
+          idx_row : 1
+          idx_col : 0
+          graph_title : "MSE by Number of Images"
+          rowspan: 1
+          colspan: 1
+          method_graph:
+            _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
+            metrics_list: [bins_nb_image_tuples_squared_error]
+            proportion_metric: bins_nb_image_tuples_squared_error
+            legend_labels: null
+            bins : ["4-8", "9-12", "13-16", "17-20", "21-24"]
+            x_label : "Number of Images"
+            y_label : "Squared Error (m^2)"
+            colors: ["#ffb854"]
+            y_min: -0.5
+            y_max: 25
+
+        - _target_: src.postprocessing.metrics.get_plots_global_utils.graph_model
+          idx_row : 2
+          idx_col : 0
+          graph_title : "Error by Number of Images"
+          rowspan: 1
+          colspan: 1
+          method_graph:
+            _target_: src.postprocessing.metrics.get_plots_global_utils.method_boxplot_by_bins
+            metrics_list: [bins_nb_image_tuples_error]
+            proportion_metric: bins_nb_image_tuples_error
+            legend_labels: null
+            bins : ["4-8", "9-12", "13-16", "17-20", "21-24"]
+            x_label : "Number of Images"
+            y_label : "Error (m)"
+            colors: ["#ffb854"]
+            y_min: -15
+            y_max: 15
+
     scatter_plot_target_pred :
       _target_: src.postprocessing.metrics.get_plots_global_utils.plot_model
       nb_row: 1

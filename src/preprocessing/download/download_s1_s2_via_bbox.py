@@ -6,13 +6,16 @@ from omegaconf import DictConfig
 from retry import retry
 from src.preprocessing.download.download_s1_s2_utils import download_s1_s2
 from pathlib import Path
+from omegaconf import OmegaConf
 
-geefetch.utils.gee.auth("ee-thomasboudras04")
+
 
 
 @hydra.main(version_base=None, config_path="../../../configs/preprocessing/download", config_name="dwd_bbox_chantilly_timeseries")
 @retry(exceptions=Exception, delay=10, tries=100)
 def main(cfg: DictConfig) -> None:
+    geefetch.utils.gee.auth(cfg.gee_project)
+    print(OmegaConf.to_yaml(cfg))
     for date in cfg.dates:
         date = date.replace("/","")
         download_s1_s2(

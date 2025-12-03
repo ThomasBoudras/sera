@@ -1,6 +1,7 @@
 root_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data/
 data_dir: ${root_dir}/sentinel/timeseries/diff/
 gdf_path : ${root_dir}/utils/gdf_diff_map_initial.geojson
+gee_project: "ee-thomasboudras04"
 
 grouping_dates: lidar_acquisition_date_t1
 

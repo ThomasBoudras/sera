@@ -18,6 +18,7 @@ from shapely.ops import unary_union
 from shapely.geometry import MultiPolygon, Polygon
 from shapely.geometry import box
 from joblib import Parallel, delayed
+from src.datamodule.datamodule_utils import expand_gdf
 import time
 
 log = utils.get_logger(__name__)
@@ -70,16 +71,22 @@ def predict(config: DictConfig) -> None:
         if config.via_bounds is not None and config.via_geojson is None:
             row = {name : data for name, data in config.via_bounds.items() if name!="bounds"}
             bounds = config.via_bounds["bounds"]
-            bounds = bounds["bottom"], bounds["left"], bounds["top"], bounds["right"]
+            bounds = bounds["left"], bounds["bottom"], bounds["right"], bounds["top"]
             row["geometry"] = box(*bounds)
             aoi_gdf = gpd.GeoDataFrame([row], crs="EPSG:2154")
 
         elif config.via_geojson is not None and config.via_bounds is None :
             aoi_gdf = gpd.read_file(config.via_geojson["path"])
-            aoi_gdf = aoi_gdf[aoi_gdf['split'] == config.via_geojson["split"]].reset_index(drop=True) 
+            if config.via_geojson.get("split", None) is not None:
+                aoi_gdf = aoi_gdf[aoi_gdf['split'] == config.via_geojson["split"]].reset_index(drop=True) 
         else:
             Exception("via_bounds and via_geojson : one of them must be provided and the other must be null")
 
+            
+        if config.get("adapt_gdf", None) is not None: 
+            adapt_gdf = hydra.utils.instantiate(config.adapt_gdf)
+            aoi_gdf = adapt_gdf(aoi_gdf)
+        
         # Save the aoi to a geojson file for datamodule
         aoi_gdf.to_file(
                 aoi_gdf_path,
@@ -94,12 +101,26 @@ def predict(config: DictConfig) -> None:
             polygons = [unioned]
         else:
             polygons = []
-        grouped_aoi_gdf = gpd.GeoDataFrame({'geometry': polygons}, crs=aoi_gdf.crs)
-        grouped_aoi_gdf.to_file(
-                grouped_aoi_gdf_path,
-                driver="GeoJSON",
-            )
+        grouped_aoi_gdf = gpd.GeoDataFrame({'geometry': polygons}, crs=aoi_gdf.crs)        
 
+        # Subdivide geometries into patches if patch_size_max is provided
+        if config.get("patch_size_max", None) is not None:
+            patch_size_max = config.patch_size_max
+            resolution = config.datamodule.dataset.resolution_input
+            
+            log.info(f"Subdividing geometries according to patch_size_max={patch_size_max}")
+            grouped_aoi_gdf = expand_gdf(grouped_aoi_gdf, patch_size=patch_size_max, margin_size=0, resolution=resolution)
+            # Ne garder que les géométries de grouped_aoi_gdf qui intersectent avec aoi_gdf
+            grouped_aoi_gdf = grouped_aoi_gdf[grouped_aoi_gdf.geometry.intersection(aoi_gdf.unary_union).area > 0].reset_index(drop=True)
+
+        else:
+            log.info("patch_size_max is null, keeping geometries as is after unary_union")
+
+
+        grouped_aoi_gdf.to_file(
+            grouped_aoi_gdf_path,
+            driver="GeoJSON",
+        )
     # Wait for the master process to be ready, it's not pretty but trainer.startegy.barrier does not work here
     if trainer.is_global_zero:
         (save_dir_tmp / "rank_0_ready").touch()
@@ -255,7 +276,7 @@ def merge_tifs(tif_poly, list_subtif, save_dir_data, model_name):
         ) :
             list_subtif_intersect.append(subtif)
 
-    # To avoid out-of-bounds issues, we extend the bounds of the tif to the global bounds of all subtifs.
+    # To avoid out-of-bounds issues, we extend the tif bounds to the global bounds of all subtifs.
     for subtif in list_subtif_intersect:
         bounds = subtif.stem.split("_")
         bounds = [int(bounds[0]), int(bounds[1]), int(bounds[2]), int(bounds[3])]
@@ -279,7 +300,7 @@ def merge_tifs(tif_poly, list_subtif, save_dir_data, model_name):
         bounds = subtif_file.stem.split("_")
         bounds = [int(bounds[0]), int(bounds[1]), int(bounds[2]), int(bounds[3])]
 
-        image, profile = get_window(
+        image, _ = get_window(
             subtif_file,
             bounds,
             resolution=None,

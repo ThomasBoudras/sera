@@ -1,0 +1,48 @@
+root_dir: /lustre/fsn1/projects/rech/ego/uof45xi/data/
+data_dir: ${root_dir}/sentinel/timeseries/ciaran
+
+create_vrts: src.preprocessing.datasets.get_clean_dataset_utils.create_vrts_timeseries
+get_valid_vrts: src.preprocessing.datasets.get_clean_dataset_utils.get_valid_vrts_timeseries
+
+n_jobs_parrallelized: -1
+
+hydra:
+  run :
+    dir : ${data_dir}/logs
+  output_subdir : hydra_logs
+
+
+year_t1 : "2023"
+year_t2 : "2024"
+######## t1 ########
+# via_bounds: 
+#   patch_size: 5000
+#   resolution: 10
+#   bounds:
+#     left: 78446
+#     bottom: 6663540
+#     right: 360010
+#     top: 6903883
+
+#   date: ${year_t1}/02/15
+
+# via_geojson: null
+
+# grouping_dates_column: lidar_acquisition_date_t1
+# validation_column: valid_vrts_t1
+# gdf_clean_path: ${data_dir}/gdf_ciaran_timeseries_t1_${year_t1}_${year_t2}.geojson
+# gdf_unclean_path: ${data_dir}/gdf_ciaran_timeseries_t1_unsaved_${year_t1}_${year_t2}.geojson
+
+
+####### t2 ########
+via_bounds: null
+
+via_geojson: 
+  path: ${data_dir}/gdf_ciaran_timeseries_t1_${year_t1}_${year_t2}.geojson
+  date: ${year_t2}/02/15
+
+grouping_dates_column: lidar_acquisition_date_t2
+validation_column: valid_vrts_t2
+gdf_clean_path: ${data_dir}/gdf_ciaran_timeseries_${year_t1}_${year_t2}.geojson
+gdf_unclean_path: ${data_dir}/gdf_ciaran_timeseries_unsaved_${year_t1}_${year_t2}.geojson
+

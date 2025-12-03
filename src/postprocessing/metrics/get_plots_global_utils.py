@@ -1,9 +1,11 @@
 from pathlib import Path
 import shutil
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-from sklearn.metrics import r2_score, mean_absolute_error
+import matplotlib.patches as mpatches
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 import seaborn as sns
 from scipy.interpolate import interpn
 from scipy.stats import linregress
@@ -19,24 +21,29 @@ class get_plots_global :
         for plot_name_base, plot in self.plot_set.items():
             fig = plt.figure(figsize=(plot.size_plot_width, plot.size_plot_height))
             plot.create_plot(metrics_global)
-            plot_path = self.save_dir / f"{plot_name_base}_{self.model_name}_plot.jpg"
+            plot_path = self.save_dir / f"{plot_name_base}_{self.model_name}_plot.pdf"
             fig.savefig(
                 plot_path, bbox_inches="tight", pad_inches=0
             )
             plt.close()
 
 class plot_model :
-    def __init__(self, graph_list, nb_row, nb_col, size_plot_width, size_plot_height):
+    def __init__(self, graph_list, nb_row, nb_col, size_plot_width, size_plot_height, hspace=0.3, wspace=0.3):
         self.graph_list = graph_list
         self.nb_row = nb_row
         self.nb_col = nb_col
         self.size_plot_width = size_plot_width
         self.size_plot_height = size_plot_height
+        self.hspace = hspace  # Horizontal space between subplots
+        self.wspace = wspace  # Width space between subplots
     
     def create_plot(self, metrics_global):
         for graph in self.graph_list :
             ax = plt.subplot2grid((self.nb_row, self.nb_col), (graph.idx_row, graph.idx_col), rowspan=graph.rowspan, colspan=graph.colspan)
             graph.create_graph(metrics_global, ax)
+        
+        # Adjust spacing between subplots
+        plt.subplots_adjust(hspace=self.hspace, wspace=self.wspace)
 
 
         
@@ -53,7 +60,7 @@ class graph_model :
         self.method_graph(metrics_global, ax)
         if self.graph_title :
             graph_title = self.graph_title
-            ax.set_title(graph_title, fontsize=16)
+            ax.set_title(graph_title)
 
 
 class method_bar :
@@ -121,8 +128,8 @@ class method_scatter_density:
         x_y_line,
         fit_line,
         show_legend,
+        add_noise
     ):
-        
         self.metric_name = metric_name
         self.x_label = x_label
         self.y_label = y_label
@@ -134,93 +141,62 @@ class method_scatter_density:
         self.x_y_line = x_y_line
         self.fit_line = fit_line
         self.show_legend = show_legend
+        self.add_noise = add_noise
 
     def __call__(self, metrics_global, ax):
-        if self.metric_name not in metrics_global:
-            raise Exception(f"Metric '{self.metric_name}' not found in metrics_global.")
-        
-        x, y = metrics_global[self.metric_name]
-        
-        sns.set_style("ticks")
-        ax.set_xlim(self.range_fig)
-        ax.set_ylim(self.range_fig)
-        
-        ax.set_aspect('equal', adjustable='box')
 
-        # Ensure input is a numpy array
-        x = np.asarray(x)
-        y = np.asarray(y)
+        # Extract x and y values from the specified metric in metrics_global.
+        x_init = metrics_global[self.metric_name][0]
+        y_init = metrics_global[self.metric_name][1]
+
+        # Remove NaNs for metric calculation
+        valid_indices = ~np.isnan(x_init) & ~np.isnan(y_init)
+        x_init = x_init[valid_indices]
+        y_init = y_init[valid_indices]
         
-        # Remove NaNs
-        valid_indices = ~np.isnan(x) & ~np.isnan(y)
-        x = x[valid_indices]
-        y = y[valid_indices]
-        
-        if len(x) == 0 or len(y) == 0:
-            return # No data to plot
+        if self.add_noise:
+            # Add uniform noise in the range [-0.5, 0.5] to x and y for visualization
+            x = x_init
+            y = y_init + np.random.uniform(-0.5, 0.5, size=y_init.shape)
+        else:
+            x, y = x_init, y_init
 
         # Calculate density using a 2D histogram
-        hist, x_edges, y_edges = np.histogram2d(
-            x, y, bins=self.bins, range=[self.range_fig, self.range_fig], density=True
-        )
-        z = interpn(
-            (x_edges[:-1], y_edges[:-1]),
-            hist,
-            np.vstack([x, y]).T,
-            method="splinef2d",
-            bounds_error=False,
-            fill_value=0,
-        )
-        z = np.nan_to_num(z)  # Replace NaNs with 0
-        idx = z.argsort()  # Sort points by density
+        hist, x_edges, y_edges = np.histogram2d(x, y, bins=self.bins, range=[self.range_fig, self.range_fig], density=True)
+        z = interpn((x_edges[:-1], y_edges[:-1]), hist, np.vstack([x, y]).T, method="splinef2d", bounds_error=False, fill_value=0)
+        
+        # Sort points by density for better plotting
+        idx = z.argsort()
         x, y, z = x[idx], y[idx], z[idx]
 
-        norm = colors.LogNorm(
-            vmin=z[z > 0].min(),
-            vmax=z.max(),
-            clip=True,
-        )
-        
-        
-        if self.max_points_on_scatter is not None:
-            idx = np.random.choice(len(x), size=min(len(x), self.max_points_on_scatter), replace=False)
-            x_scatter = x[idx]
-            y_scatter = y[idx]
-            z_scatter = z[idx]
-        else :
-            x_scatter = x
-            y_scatter = y
-            z_scatter = z
+        # Check if the number of points exceeds the maximum allowed for scatter plotting.
+        if len(x) > self.max_points_on_scatter:
+            # If so, generate a random sample of indices.
+            idx = np.random.choice(np.arange(len(x)), self.max_points_on_scatter, replace=False)
+            x = x[idx]
+            y = y[idx]
+            z = z[idx]
 
-        ax.scatter(
-            x_scatter,
-            y_scatter,
-            c=z_scatter,
-            s=self.point_size,
-            cmap="magma",
-            norm=norm,
-            edgecolor="none",
-        )
+        # Set plot limits and aspect ratio.
+        ax.set_xlim(self.range_fig)
+        ax.set_ylim(self.range_fig)
+        ax.set_aspect('equal', adjustable='box')
 
+        # Create the scatter plot with density coloring
+        norm = colors.LogNorm(vmin= 5e-5, vmax=1e-2, clip=True)
+        ax.scatter(x, y, c=z, s=self.point_size, cmap="inferno", norm=norm, edgecolor="none")
 
-
+        # Add a 1:1 line for reference if specified.
         if self.x_y_line:
-            ax.plot(
-                self.range_fig,
-                self.range_fig,
-                color="black",
-                linestyle="dashed",
-                linewidth=1,
-                label="y=x",
-            )
-        
+            ax.plot(self.range_fig, self.range_fig, 'k--', label='1:1')
+
+        # Add a linear fit line if specified.
         if self.fit_line:
             # Perform linear regression
-            slope, intercept, _, _, _ = linregress(x, y)
+            slope, intercept, _, _, _ = linregress(x_init, y_init)
 
             # Generate the fit line
             fit_line = slope * np.array(self.range_fig) + intercept
-
             ax.plot(
                 self.range_fig,
                 fit_line,
@@ -230,46 +206,41 @@ class method_scatter_density:
                 label="Linear fit",
             )
 
-        if self.show_legend:    
-            ax.legend(loc="upper left")
-
         # Add axis labels
         if self.x_label:
-            ax.set_xlabel(self.x_label, fontsize=10)
+            ax.set_xlabel(self.x_label)
         if self.y_label:
-            ax.set_ylabel(self.y_label, fontsize=10)
+            ax.set_ylabel(self.y_label)
 
-        # Prepare metrics for display
-        metrics = []
-        if "mae" in self.metrics_plot:
-            mae = mean_absolute_error(x, y)
-            metrics.append(f"MAE = {mae:.2f} m")
-        if "me" in self.metrics_plot:
-            me = np.mean(y - x)
-            metrics.append(f"ME = {me:.2f} m")
-        if "mape" in self.metrics_plot:
-            safe_mask = x != 0  # in case x=0
-            mape = np.mean(np.abs((y[safe_mask] - x[safe_mask]) / x[safe_mask])) * 100
-            metrics.append(f"MAPE = {mape:.2f}%")
+        # Build the text for metrics to be displayed on the plot.
+        metrics_text = []
         if "r2" in self.metrics_plot:
-            r2 = r2_score(x, y)
-            metrics.append(f"R² = {r2:.2f}")
-        if "r2_pearson" in self.metrics_plot:
-            r2_p = np.corrcoef(x, y)[0, 1] ** 2
-            metrics.append(f"r² = {r2_p:.2f}")
-
-        if metrics:
+            r2 = r2_score(x_init, y_init)
+            metrics_text.append(f"$R^2$ = {r2:.3f}")
+        if "mae" in self.metrics_plot:
+            mae = mean_absolute_error(x_init, y_init)
+            metrics_text.append(f"MAE = {mae:.3f}")
+        if "rmse" in self.metrics_plot:
+            rmse = np.sqrt(mean_squared_error(x_init, y_init))
+            metrics_text.append(f"RMSE = {rmse:.3f}")
+        if "me" in self.metrics_plot:
+            me = np.mean(y_init - x_init) # Prediction - Target
+            metrics_text.append(f"ME = {me:.3f}")
+        
+        # Display the metrics in a text box.
+        if metrics_text:
             ax.text(
                 self.range_fig[1] - 0.04 * (self.range_fig[1] - self.range_fig[0]),
-                self.range_fig[0] + 0.07 * (self.range_fig[1] - self.range_fig[0]),
-                "\n".join(metrics),
-                fontsize=10,
-                ha="right",
-                backgroundcolor="white",
+                self.range_fig[0] + 0.1 * (self.range_fig[1] - self.range_fig[0]),
+                "\n".join(metrics_text), 
+                verticalalignment='top',
+                horizontalalignment='right',
+                bbox=dict(facecolor='white', alpha=0.9, edgecolor='none', boxstyle='square,pad=0.5')
             )
 
 class method_boxplot_by_bins:
-    def __init__(self, metrics_list, proportion_metric, legend_labels, bins, x_label, y_label, colors, y_min=None, y_max=None):
+    def __init__(self, metrics_list, proportion_metric, legend_labels, bins, x_label, y_label, colors, legends_and_labels_shown, y_min=None, y_max=None, max_points_per_bin=None):
+        # Store input parameters for later use in plotting
         self.metrics_list = metrics_list
         self.proportion_metric = proportion_metric
         self.legend_labels = legend_labels
@@ -279,60 +250,162 @@ class method_boxplot_by_bins:
         self.colors = colors   
         self.y_min = y_min
         self.y_max = y_max
+        self.legends_and_labels_shown = legends_and_labels_shown
+        self.max_points_per_bin = max_points_per_bin
 
 
-        
     def __call__(self, metrics_global, ax):
+        # Ensure all provided metric names are present in the global metrics dictionary
         for metric_name in self.metrics_list:
             if metric_name not in metrics_global:
                 raise Exception(f"Metric '{metric_name}' not found.")
-        if self.proportion_metric not in metrics_global:
+        # Check that the proportion metric exists if it is specified
+        if self.proportion_metric is not None and self.proportion_metric not in metrics_global:
             raise Exception(f"Proportion metric '{self.proportion_metric}' not found.")
 
         num_metrics = len(self.metrics_list)
-        positions = np.arange(len(self.bins))
-        # Adjust box width based on the number of metrics to plot side-by-side
-        box_width = 0.8 / num_metrics
+        positions = np.arange(len(self.bins))  # x positions for boxplots
+        box_width = 0.8 / max(num_metrics, 1)  # width of each boxplot depending on number of metrics
 
-        boxplots = []
+        # Select default color palette if colors is None, otherwise use provided palette
+        if self.colors is None:
+            palette = sns.color_palette("Set2", num_metrics)
+        elif isinstance(self.colors, str):
+            palette = sns.color_palette(self.colors, num_metrics)
+        else:
+            palette = self.colors
+
+        legend_handles = []
         for i, metric_name in enumerate(self.metrics_list):
-            data_to_plot = metrics_global[metric_name]
-            # Calculate the offset for each set of boxplots to be side-by-side
+            data_to_plot_full = metrics_global[metric_name]
+
+            if self.max_points_per_bin is not None:
+                data_to_plot = []
+                for bin_data in data_to_plot_full:
+                    if len(bin_data) > self.max_points_per_bin:
+                        # Using np.random.choice for efficient sampling
+                        sampled_data = np.random.choice(np.array(bin_data), self.max_points_per_bin, replace=False)
+                        data_to_plot.append(sampled_data)
+                    else:
+                        data_to_plot.append(bin_data)
+            else:
+                data_to_plot = data_to_plot_full
+
+            # Calculate boxplot position offset so boxes don't overlap for multiple metrics
             offset = (i - (num_metrics - 1) / 2) * box_width
             current_positions = positions + offset
-            
-            bp = ax.boxplot(data_to_plot, positions=current_positions, widths=box_width * 0.9, showfliers=False, patch_artist=True)
-            # Apply color
-            for box in bp['boxes']:
-                box.set_facecolor(self.colors[i % len(self.colors)])
-            boxplots.append(bp)
+            color = palette[i % len(palette)]
 
+            # Create the boxplot for this metric
+            bp = ax.boxplot(
+                data_to_plot,
+                positions=current_positions,
+                widths=box_width * 0.9,
+                showfliers=False,
+                patch_artist=True,
+                boxprops=dict(facecolor=color, edgecolor=color, linewidth=1.5, alpha=0.7),
+                medianprops=dict(color="black", linewidth=1.0),
+                whiskerprops=dict(color=color, linewidth=1.3),
+                capprops=dict(color=color, linewidth=1.3),
+                zorder=3,
+            )
+
+            # Style the whiskers and caps for clarity
+            for whisker in bp["whiskers"]:
+                whisker.set_linestyle("-")
+            for cap in bp["caps"]:
+                cap.set_alpha(0.9)
+
+            # Add corresponding legend entry if legend labels are provided
+            if self.legend_labels is not None and self.legends_and_labels_shown and i < len(self.legend_labels):
+                legend_handles.append(
+                    mpatches.Patch(facecolor=color, edgecolor=color, alpha=0.7, label=self.legend_labels[i])
+                )
+
+        # Set the x-tick positions at the center of each bin
         ax.set_xticks(positions)
-        ax.set_xticklabels(self.bins, rotation=40, ha="right")
         
-        ax.set_xlabel(self.x_label, fontsize=14)
-        ax.set_ylabel(self.y_label, fontsize=14)
+        # Set the label names for bins, rotated for better readability
+        if self.legends_and_labels_shown:
+            ax.set_xticklabels(self.bins, rotation=40, ha="right")
+        else:
+            ax.set_xticklabels([])
+        
+        # Set the x and y axis labels if provided
+        if self.x_label is not None and self.legends_and_labels_shown:
+            ax.set_xlabel(self.x_label, fontsize=13)
+        
+        if self.y_label is not None and self.legends_and_labels_shown:
+            ax.set_ylabel(self.y_label, fontsize=13)
+        
+        if not self.legends_and_labels_shown:
+            ax.set_yticklabels([])
+
+        # Optionally set y-axis limits if provided
         if self.y_min is not None and self.y_max is not None:
             ax.set_ylim(self.y_min, self.y_max)
-        ax.grid(color="gray", linestyle="dashed", axis="y")
 
-        ax.legend([bp["boxes"][0] for bp in boxplots], self.legend_labels, loc='upper right')
-        
+        ax.tick_params(axis='y', direction='in', length=6)
+        ax.tick_params(axis='x', direction='in', length=6)
+
+        # Draw a horizontal line at y=0 for reference
+        ax.axhline(0, color="black", linewidth=1.0, linestyle="-", zorder=0)
+        # Add grid lines for better readability
+        ax.grid(color="#C4C4C4", linestyle="--", axis="y", linewidth=0.7, zorder=1)
+        ax.set_facecolor("white")
+
+        # Hide unnecessary plot spines for a cleaner look
+        if not self.legends_and_labels_shown :
+            for spine in ["top", "right", "left", "bottom"]:
+                ax.spines[spine].set_visible(False)
+
+        # Add the legend to the plot if any legend handles were created
+        if legend_handles and self.legends_and_labels_shown:
+            legend = ax.legend(handles=legend_handles, loc="lower left", frameon=False)
+            legend.set_zorder(4)
+
+        # If a proportion metric is specified, display a bar overlay for counts/proportions
         if self.proportion_metric is not None:
             ax2 = ax.twinx()
+ 
+             # Compute the number of values in each bin
             proportion_data = metrics_global[self.proportion_metric]
             proportions = [len(data) for data in proportion_data]
+
+            # Compute the percentage that each bin represents
             total_values = sum(proportions)
-            
             proportions_percentage = [prop / total_values * 100 if total_values > 0 else 0 for prop in proportions]
+
+            # Overlay a bar plot showing the proportions for each bin
+            ax2.bar(
+                positions,
+                proportions_percentage,
+                alpha=0.3,
+                color="#BFBFBF",
+                width=0.75,
+                edgecolor="none",
+            )
+
+            if self.legends_and_labels_shown:
+                ax2.set_ylabel('Proportion (%)', fontsize=13)
+
+            ax2.tick_params(axis='y', direction='in', length=6)
+            if not self.legends_and_labels_shown:
+                ax2.set_yticklabels([])
             
-            ax2.bar(positions, proportions_percentage, alpha=0.3, color='gray', width=0.8, zorder=0)
-            
-            ax2.set_ylabel('Proportion (%)', fontsize=14)
-            ax2.tick_params(axis='y')
+            # Hide all spines for the secondary axis as well
+            if not self.legends_and_labels_shown :
+                for spine_pos in ['top', 'right', 'left', 'bottom']:
+                    ax2.spines[spine_pos].set_visible(False)
+
+            # Set y-axis range for the secondary axis based on the data
             if proportions_percentage and max(proportions_percentage) > 0:
-                    ax2.set_ylim(0, max(proportions_percentage) * 1.2)
+                ax2.set_ylim(0, max(proportions_percentage) * 1.25)
             else:
-                    ax2.set_ylim(0, 1)
+                ax2.set_ylim(0, 1)
+            # Avoid grid on the overlay axis for clarity
+            ax2.grid(False)
 
-
+             # Ensure ax is drawn on top of ax2 and has a transparent background
+            ax.set_zorder(ax2.get_zorder() + 1)
+            ax.patch.set_visible(False)
